@@ -1,3 +1,13 @@
+''' Create tables from text grid annotations made for the Fame corpus
+provides the class Tables to load all tables for all annotations
+work in progress:
+	linking annotations to wav file
+	extact word from wav file
+	extracting code switching [language code words annotated] [nl hoe gaat het] 
+		[fr WurkProgram kolleezje]
+
+
+
 import glob
 import os
 import progressbar as pb
