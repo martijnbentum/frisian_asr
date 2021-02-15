@@ -55,16 +55,19 @@ class Tables:
 
 
 	def make(self):
-		for f in self.fn:
+		bar = pb.ProgressBar()
+		bar(range(len(self.fn)))
+		for i,f in enumerate(self.fn):
 			self.tables.append(Table(f))
+			bar.update(i)
 		self.combined_table = Table()
 		for table in self.tables:
-			self.combined_table.table_lines.extend(table.table_lines)
+			self.combined_table.lines.extend(table.lines)
 
 
 class Table:
 	def __init__(self,f = 'all'):
-		self.table_lines,self.rejected_lines, self.background_lines = [], [], []
+		self.lines,self.rejected_lines, self.background_lines = [], [], []
 		self.f =f 
 		if f == 'all': self.filename = 'Combined table'
 		else:
@@ -75,13 +78,13 @@ class Table:
 			self.handle_table_lines()
 
 	def __repr__(self):
-		return 'Table '+ ' ' + str(len(self.table_lines)) + ' lines\tFilename:' + self.filename 
+		return 'Table '+ ' ' + str(len(self.lines)) + ' lines\tFilename:' + self.filename 
 
 	def handle_table_lines(self):
 		for line in self.body:
 			if line == ['']: continue
 			tl = TableLine(line)
-			if tl.ok: self.table_lines.append(TableLine(line,self.filename))
+			if tl.ok: self.lines.append(TableLine(line,self.filename))
 			elif tl.background: self.background_lines.append(tl)
 			else:self.rejected_lines.append(tl)
 
