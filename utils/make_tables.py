@@ -14,11 +14,11 @@ import os
 import progressbar as pb
 
 
-input_dir = '/vol/tensusers/mbentum/FRYSIAN_ASR/corpus/fame/annot/all_textgrids/'
-output_dir = '/vol/tensusers/mbentum/FRYSIAN_ASR/TABLES/'
+input_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/corpus/fame/annot/all_textgrids/'
+output_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/TABLES/'
 
-input_dir_spk = '/vol/tensusers/mbentum/FRYSIAN_ASR/corpus/fame/annot/all_textgrids/'
-output_dir_spk = '/vol/tensusers/mbentum/FRYSIAN_ASR/TABLES/SPK/'
+input_dir_spk = '/vol/tensusers/mbentum/FRISIAN_ASR/corpus/fame/annot/all_textgrids/'
+output_dir_spk = '/vol/tensusers/mbentum/FRISIAN_ASR/TABLES/SPK/'
 
 
 def get_files(directory=input_dir, extension = '*.TextGrid'):
