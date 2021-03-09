@@ -6,20 +6,20 @@ import textract
 from texts.models import Text, Language, TextType, Source
 
 
-source = Source.objects.get(name='frysian council notes')
+source = Source.objects.get(name='frisian council notes')
 texttype= TextType.objects.get(name='council notes')
 dutch = Language.objects.get(name='Dutch')
-frysian = Language.objects.get(name='Frysian')
+frisian = Language.objects.get(name='Frisian')
 
-directory = '/vol/tensusers/mbentum/FRYSIAN_ASR/frysian_council_notes/'
+directory = '/vol/tensusers/mbentum/FRYSIAN_ASR/frisian_council_notes/'
 fn = []
 
 language_dict = {
-	'enkel in fries':[frysian],
+	'enkel in fries':[frisian],
 	'enkel in nederlands':[dutch],
-	'mix van fries en nederlands in zelfde document':[frysian,dutch],
-	'notulen waarin frl en nl in combi':[frysian,dutch],
-	'zelfde documenten in fries en nederlands':[frysian,dutch],
+	'mix van fries en nederlands in zelfde document':[frisian,dutch],
+	'notulen waarin frl en nl in combi':[frisian,dutch],
+	'zelfde documenten in fries en nederlands':[frisian,dutch],
 	'NA':[]
 }
 
@@ -49,7 +49,7 @@ def handle_files(save = False):
 		incorrect_ft= False if filetype.lower() in 'doc,docx,pdf,txt,rtf'.split(',') else True
 		if incorrect_ft: continue
 		try: 
-			raw_text = textract.process(filename)
+			raw_text = textract.process(filename).decode()
 			error = False	
 		except: 
 			raw_text = ''
@@ -78,22 +78,36 @@ def find_language_folder(d):
 			return f
 	return 'NA'
 
-'''
 
-	filename = models.CharField(max_length=1000,default='',unique=True)
-	filetype = models.CharField(max_length=10,default='')
-	raw_text = models.TextField(default='')
-	clean_text = models.TextField(default='')
-	titel = models.CharField(max_length=1000,default='')
-	main_language =  models.ForeignKey(Language, **dargs,related_name = 'main_language')
-	all_languages = models.ManyToManyField(Language,blank=True, related_name = 'all_languages')
-	multiple_languages = models.BooleanField()
-	source=  models.ForeignKey(Source, **dargs)
-	text_type = models.ForeignKey(TextType, **dargs)
-	error= models.BooleanField(default = False)
-	note= models.CharField(max_length=300,default='')
+def export_unk_files(goal_dir = '../unk_files/'):
+	t = Text.objects.filter(main_language = None,multiple_languages=False)
+	for i,x in enumerate(t):
+		filename = str(i+1) + '___' + x.filename.split('/')[-1].split('.')[0]
+		text = x.raw_text
+		with open(goal_dir + filename + '.txt','w') as fout:
+			fout.write(text)
 
-'''
+def export_mixed_files(goal_dir = '../mixed_files/'):
+	t = Text.objects.filter(multiple_languages=True)
+	for i,x in enumerate(t):
+		filename = str(i+1) + '___' + x.filename.split('/')[-1].split('.')[0]
+		text = x.raw_text
+		with open(goal_dir + filename + '.txt','w') as fout:
+			fout.write(text)
+
+def make_text_frisian_minutes(save = False):
+	d = {}
+	directory = '/vol/tensusers/mbentum/FRISIAN_ASR/frisian_minutes/' 
+	fn = glob.glob( directory + '*.pdf')
+	for f in fn:
+		raw_text = textract.process(f).decode()
+		d[f] = raw_text
+		filename = f.split('/')[-1].split('.')[0] + '.txt'
+		if save:
+			with open(directory + 'txt/' + filename,'w') as fout:
+				fout.write(raw_text)
+	return d
+
 
 
 
