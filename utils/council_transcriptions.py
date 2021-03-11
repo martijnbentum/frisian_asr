@@ -18,6 +18,34 @@ from texts.models import Text, Language, TextType, Source
 [nl-overlap: = Betekenis nu niet bekend, ingevoerd door taalspecialist. Betekenis wordt nagevraagd.
 '''
 
+output_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/'
+
+def get_all_transcriptions_with_tags(error = False,save = False, with_original=False):
+	tt = Text.objects.filter(source__name = 'frisian council transcripts').filter(error = error)
+	o = []
+	for t in tt:
+		o.append(t.transcription.line_with_tags)
+		if with_original:
+			o.append(t.transcription.line)
+			o.append('-'*9)
+	if save: 
+		filename = output_dir + 'labels_with_tags'
+		if error: filename += '_error'
+		if with_original:filename += '_with_original'
+		filename += '.txt'
+		with open(filename,'w') as fout:
+			fout.write('\n'.join(o))
+	return o
+
+
+nsn = 'geluid,oversturing,ruis,klok,hamer,foto,applaus,microfoon,klop'
+nsn += ',tafel,koffie,stoel,water,typen,pen,papier,geklap,telefoon'
+nsn = nsn.split(',')
+spn = 'spraak,kuch,lach,zucht,za,slikken,geroezemoes,ademhaling'
+spn = ',lipsmack,he,hè,eh,nies,hoest'
+spn = spn.split(',')
+
+
 filename_labels = '/vol/tensusers3/Frisiansubtitling/Downloads-Humainr/First_Batch_20210218/Transcriptions/labels.txt'
 filename_protocol= '/vol/tensusers3/Frisiansubtitling/Downloads-Humainr/First_Batch_20210218/Transcriptions/protocol_en_tags.txt'
 
@@ -27,7 +55,8 @@ dutch_frisianized = Language.objects.get(name='Dutch_frisianized')
 frisian_dutchized = Language.objects.get(name='Frisian_dutchized')
 english = Language.objects.get(name='English')
 ld = {'FRL':frisian,'NL':dutch,'frl':frisian,'nl':dutch,'frl-nl':frisian_dutchized}
-ld.update({'nl-frl':dutch_frisianized, 'frl-sw':frisian,'en':english})
+ld.update({'nl-frl':dutch_frisianized, 'frl-sw':frisian,'en':english,'frl_??':'frl-??'})
+ld.update({'frl-??':'frl-??'})
 
 cs = 'frl,nl,frl-??,frl_??,frl-nl,nl-frl,frl-sw,nl-overlap,overlap-nl,en'.split(',')
 tags = dict([[x,'code_switch'] for x in cs])
@@ -117,17 +146,49 @@ class Transcription:
 	def languages(self):
 		return list(set([w.language for w in self.words if w.language]))
 
+	@property
+	def text_with_tags(self):
+		d = {dutch:'-nl',frisian:'-fr',dutch_frisianized:'-nl',frisian_dutchized:'-fr',english:'-eng'}
+		output = []
+		for word in self.words:
+			if word.word == '$$': continue
+			if word.is_word and word.language: 
+				if word.language == 'frl-??': output.append('<spn>')
+				else: output.append(word.word + d[word.language])
+			else:output.append(word.word)
+		return ' '.join(output).lower()
+		
+	@property
+	def line_with_tags(self):
+		return '\t'.join([self.wav,str(self.start),str(self.end),self.text_with_tags])
+			
+
 
 class Word:
-	def __init__(self,word,language, code_switched):
+	def __init__(self,word,language, code_switched,tag = '',is_word = True):
+		if word == '<eh>':
+			if tag == '': tag = 'eh' 
+			language = ''
+			code_switched = False
+			word = '<spn>'
 		self.word = word
+		self.original_word = word
 		self.language = language
 		self.code_switched = code_switched
+		self.tag = tag
+		self.is_word = is_word
+		self.check()
 
 	def __repr__(self):
 		cs = ' | code_switched' if self.code_switched else ''
 		l = self.language.name if self.language else 'Unk'
 		return self.word.ljust(20) + ' | ' + l.ljust(8) + cs
+	
+	def check(self):
+		for char in list('[]{}:'):
+			if char in self.word:
+				self.is_word = False
+				self.word = '<nsn>'
 
 class Bracket:
 	def __init__(self,bracket):
@@ -154,16 +215,36 @@ class Bracket:
 				try: self.language = ld[self.t]
 				except: pass 
 				self.make_words()
+			else: 
+				label = ''
+				for item in nsn:
+					if item in self.tag_text: label = '<nsn>'
+				if not label:
+					for item in spn:
+						if item in self.tag_text: label = '<spn>'
+				if not label: 
+					print('could not categorize tag text:',self.tag_text,'setting word to nsn')
+					label = '<nsn>'
+				self.words.append(Word(label,'',False,False))
+
+
+	def __repr__(self):
+		return self.text + ' | ' + self.tag + ' | '  + str(self.error) + ' | ' + str(self.tag_error)
+
 		
 	def make_words(self):
 		for w in self.tag_text.split(' '):
-			self.words.append(Word(w,self.language,True))
+			self.words.append(Word(w,self.language,True,self.tag))
 	
+
 
 
 	
 	
 def get_brackets(line):
+	line = line.replace('[eh]','<eh>')
+	line = re.sub('[^ ]<eh>',' <eh>',line)
+	line = re.sub('<eh>[^ ]','<eh> ',line)
 	line_without = []
 	brackets = []
 	st, et,old_et = -1,-1,0
@@ -183,6 +264,8 @@ def get_brackets(line):
 			error = True
 		else:
 			line_without.append( line[old_et:] )
+			break
+		if error:
 			break
 	words = []
 	for chunk in line_without:
