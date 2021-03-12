@@ -52,18 +52,36 @@ class Text(models.Model):
 		# f = self.filename.split('/')[-1] if self.filename else ''
 		try:s = self.source.name.ljust(30)
 		except:s =''.ljust(30)
-		t = self.raw_text[:70] + '...' if len(self.raw_text) > 70 else self.raw_text
-		return  s + ' | ' + t
+		if self.clean_text: text = self.clean_text
+		elif self.raw_text: text = self.raw_text
+		else: text = ''
+		t = text[:60] + '...' if len(text) > 60 else text
+		m =  s + ' | ' + t.ljust(65) + ' | ' + str(len(text.split(' '))) + ' words'
+		l = self.languages
+		if l: m += ' | ' + l
+		return m
+		
 
 	def raw_word_count(self):
 		return len(self.raw_text.split(' '))
 
 	@property
+	def languages(self):
+		languages = self.all_languages.all()
+		if languages: return ', '.join([language.name for language in languages])
+		if self.main_language: return self.main_language.name
+		return ''
+
+	@property
 	def transcription(self):
-		from utils.council_transcriptions  import Transcription
-		t = 'frisian council transcripts'
-		if not self.source.name == t: return 'not available, source is not:'+t
+		from utils.manual_transcriptions  import Transcription
+		from utils.make_tables import make_tableline_from_dict
 		if not hasattr(self,'_transcription'):
-			self._transcription = Transcription(self.transcription_meta)
+			if self.source.name == 'frisian council transcripts': 
+				self._transcription = Transcription(self.transcription_meta,line_type='council')
+			elif self.source.name == 'frisian radio broadcasts': 
+				tableline = make_tableline_from_dict(self.transcription_meta)
+				self._transcription = Transcription(tableline,line_type = 'radio')
+			else: return 'not available, source is not a radio or council transcription'
 		return self._transcription
 		
