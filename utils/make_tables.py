@@ -141,6 +141,13 @@ class TableLine:
 		self.ok = True if len(self.unknown_tier_item) == 0 else False
 
 			
+def make_tableline_from_dict(d):
+	if type(d) == str: 
+		try: eval(d)
+		except: raise ValueError('could not convert to TableLine dict '+ d)
+	x = TableLine('')
+	x.__dict__ = d
+	return x
 
 		
 		
