@@ -15,7 +15,7 @@ def read_into_database(xml = None,texts = None, start = 0):
 	if texts == None: texts = get_texts(xml)
 	o = []
 	bar = pb.ProgressBar()
-	bar(range(len(texts)))
+	bar(range(len(texts[start:])))
 	for i,t in enumerate(texts[start:]):
 		bar.update(i)
 		if not t.text: continue
