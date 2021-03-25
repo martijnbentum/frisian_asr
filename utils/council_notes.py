@@ -4,6 +4,7 @@ import progressbar as pb
 import sys
 import textract
 from texts.models import Text, Language, TextType, Source
+from utils import language_detection as ld
 
 
 source = Source.objects.get(name='frisian council notes')
@@ -11,7 +12,7 @@ texttype= TextType.objects.get(name='council notes')
 dutch = Language.objects.get(name='Dutch')
 frisian = Language.objects.get(name='Frisian')
 
-directory = '/vol/tensusers/mbentum/FRYSIAN_ASR/frisian_council_notes/'
+directory = '/vol/tensusers/mbentum/FRISIAN_ASR/frisian_council_notes/'
 fn = []
 
 language_dict = {
@@ -110,4 +111,34 @@ def make_text_frisian_minutes(save = False):
 
 
 
+def load_frisian_minutes_in_db(d = None, save = False):
+	'''set of pdf's scanned by jelske.'''
+	source = Source.objects.get(name='frisian council minutes')
+	texttype= TextType.objects.get(name='council notes')
+	output = []
+	language_dict = {'Frisian':frisian,'Dutch':dutch}
+	c = ld.load('Dutch-Frisian_sentences')
+	if not d: d = make_text_frisian_minutes()
+	for f,text in d.items():
+		print(f)
+		t = Text.objects.filter(filename__exact=f)
+		if t:
+			print(f.split('/')[-1],'already found in database',9)#t)
+			output.append(t)
+			continue
+		o = c.predict_text(text)
+		main_language = language_dict[o.main_language_overall_prediction]
+		multiple_languages = True
+		t = Text(filename = f, filetype = 'pdf', source = source, text_type = texttype,
+			raw_text = text,main_language = main_language, multiple_languages = multiple_languages) 
+		output.append(t)
+		if save:
+			try:t.save()
+			except:
+				print('could not save:',10)#t)
+				print(sys.exc_info())
+				continue
+			for language in [frisian,dutch]:
+				t.all_languages.add(language)
+	return output
 
