@@ -2,9 +2,9 @@ import re
 
 
 'copied from file: /home/eyilmaz/main2/latest_ASR_exps/fame/data/local/dict/lexicon.txt'
-f = '/vol/tensusers/mbentum/FRISIAN_ASR/final_lexicon_emre.txt'
-twente_f = '/vol/tensusers/mbentum/FRISIAN_ASR/twente_lexicon.txt'
-frisian_f = '/vol/tensusers/mbentum/FRISIAN_ASR/Frysk.txt'
+f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/final_lexicon_emre.txt'
+twente_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/twente_lexicon.txt'
+frisian_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/Frysk.txt'
 
 class Lexicon:
 	def __init__(self,words,language,prons= [],name = ''):
@@ -27,11 +27,16 @@ class Lexicon:
 
 	def overlap(self,other):
 		assert type(self) == type(other)
-		return list(set(self.words) - set(other.words))
-
+		return list(set(self.words).intersection( set(other.words)))
 
 	def unique(self,other):
 		assert type(self) == type(other)
+		return list(set(self.words) - set(other.words))
+
+
+	def symmetric_unique(self,other):
+		assert type(self) == type(other)
+		return list(set(self.words).symmetric_difference(set(other.words)))
 		
 		
 
@@ -86,3 +91,8 @@ def make_twente_lexicon():
 def make_frisian_frysk_lexicon():
 	w,p,t,e = read_frisian_lexicon()
 	return Lexicon(w,'Frisian',p,'Frysk lexicon')
+
+def get_overlap_wordset():
+	f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/overlap_wordlist'
+	t = open(f).read().split('\n')
+	return set(t)
