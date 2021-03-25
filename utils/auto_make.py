@@ -24,7 +24,7 @@ def make_texttypes(texttypes=texttypes, remove_old = False):
 
 
 sources = 'frisian radio broadcasts,frisian council notes,frisian council transcripts'
-sources += ',wikipedia,gutenberg,magazine,newspaper,book,cgn,cow'
+sources += ',wikipedia,gutenberg,magazine,newspaper,book,cgn,cow,frisian council minutes'
 sources = sources.split(',')
 
 def make_sources(sources = sources,remove_old=False):
