@@ -210,11 +210,37 @@ class Transcription:
 			if word.word == '$$': continue
 			if word.is_word and word.language: output.append(word.word)
 		return ' '.join(output).lower()
+
+	@property
+	def tags_list(self):
+		d = {dutch:'nl',frisian:'fr',dutch_frisianized:'nl',frisian_dutchized:'fr',
+			english:'eng'}
+		output = []
+		for word in self.words:
+			if word.word == '$$': continue
+			if word.is_word and word.language: 
+				if word.language == 'frl-??': output.append('fr')
+				else: output.append(d[word.language])
+		return output
 		
 	@property
 	def line_with_tags(self):
 		return '\t'.join([self.wav,str(self.start),str(self.end),self.text_with_tags])
 			
+
+	@property
+	def dutch_words(self):
+		o = []
+		for word in self.words:
+			if word.language in [dutch,dutch_frisianized]: o.append(word)
+		return o
+
+	@property
+	def frisian_words(self):
+		o = []
+		for word in self.words:
+			if word.language in [frisian,frisian_dutchized]: o.append(word)
+		return o
 
 
 class Word:
