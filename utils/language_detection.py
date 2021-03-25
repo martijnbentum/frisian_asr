@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 
 import time
 import copy
+import glob
 import pickle
 
 class LangDetect:
@@ -121,6 +122,10 @@ def load(filename,directory = '/vol/tensusers/mbentum/FRISIAN_ASR/LANGUAGE_DETEC
 	with open(f,'rb') as fin:
 		return pickle.load(fin)
 
+def show_models(directory = '/vol/tensusers/mbentum/FRISIAN_ASR/LANGUAGE_DETECTION_MODELS/'):
+	fn = [f.split('/')[-1] for f in glob.glob(directory + '*')]
+	print('\n'.join(fn))
+
 
 class Output:
 	'''handle the output of .predict_text of the LangDetect class.
@@ -169,7 +174,34 @@ class Output:
 				self.count = count
 				self.majority_language = name
 
+	@property
+	def found_languages(self):
+		o = []
+		for language in self.language_names:
+			if len(getattr(self,language)) > 0: o.append(language)
+		return o
+
 			
+		
+def exclude_overlap_words(correctness,overlap):
+	c = correctness
+	count = 0
+	test, pred = [] , []
+	for x_test, y_test, y_pred in zip(c.x_test,c.y_test,c.y_pred):
+		if x_test in overlap:
+			count += 1
+			continue
+		test.append( y_test )
+		pred.append( y_pred )
+
+	print('before:')
+	print( confusion_matrix(c.y_test,c.y_pred))
+	print( classification_report(c.y_test,c.y_pred))
+	print('after overlap words removal:')
+	print( confusion_matrix(test,pred))
+	print( classification_report(test,pred))
+	print('removed:',count,'words from evaluation (these words occur in both dutch and frisian)')
+	return test, pred
 		
 
 
