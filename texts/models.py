@@ -1,4 +1,5 @@
 from django.db import models
+import re
 
 # Create your models here.
 
@@ -50,20 +51,24 @@ class Text(models.Model):
 
 	def __repr__(self):
 		# f = self.filename.split('/')[-1] if self.filename else ''
-		try:s = self.source.name.ljust(30)
-		except:s =''.ljust(30)
+		try:s = self.source.name.ljust(27)
+		except:s =''.ljust(27)
 		if self.clean_text: text = self.clean_text
 		elif self.raw_text: text = self.raw_text
 		else: text = ''
+		text = re.sub('\s+',' ',text[:500])
 		t = text[:60] + '...' if len(text) > 60 else text
-		m =  s + ' | ' + t.ljust(65) + ' | ' + str(len(text.split(' '))) + ' words'
+		m =  s + ' | ' + t.ljust(65) + ' | ' + str(self.raw_word_count()) + ' words'
 		l = self.languages
 		if l: m += ' | ' + l
 		return m
 		
 
 	def raw_word_count(self):
-		return len(self.raw_text.split(' '))
+		if self.clean_text: text = self.clean_text
+		elif self.raw_text: text = self.raw_text
+		else: text = ''
+		return len(re.sub('\s+',' ',text).split(' '))
 
 	@property
 	def languages(self):
