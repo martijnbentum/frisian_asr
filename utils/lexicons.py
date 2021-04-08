@@ -5,6 +5,7 @@ import re
 f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/final_lexicon_emre.txt'
 twente_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/twente_lexicon.txt'
 frisian_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/Frysk.txt'
+council_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/lexicon_frisian_dutch_council.txt'
 
 class Lexicon:
 	def __init__(self,words,language,prons= [],name = ''):
@@ -46,6 +47,12 @@ def read_pronlex(filename):
 	prons = [line[1] for line in t if len(line) >= 2]
 	errors= [line for line in t if len(line) < 2]
 	return t,words, prons, errors
+
+def council_lexicon():
+	t, words, prons, errors = read_pronlex(council_f)
+	return Lexicon(words,'Dutch, Frisian',prons,'council')
+
+
 
 
 def read_frisian_dutch_lexicon():
@@ -96,3 +103,38 @@ def get_overlap_wordset():
 	f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/overlap_wordlist'
 	t = open(f).read().split('\n')
 	return set(t)
+
+
+def find_new_words(text = '',words = None):
+	if not words: words = words = re.sub('\s+',' ',text).split(' ')
+	dutch, frisian = make_dutch_and_frysian_lexicon()
+	overlap = get_overlap_wordset()
+	fws = set(frisian.words)
+	dws = set(dutch.words)
+	new_overlap,new_dutch,new_frisian,error = [],[],[],[]
+	for w in words:
+		 #word, lang = w.split('-')
+		word = w[:-3]
+		if w.endswith('-nl'):lang = 'nl'
+		if w.endswith('-fr'):lang = 'fr'
+		if word in overlap: continue
+		if lang == 'fr':
+			if word in dws: new_overlap.append(w)
+			elif word not in fws: new_frisian.append(w)
+		elif lang == 'nl':
+			if word in fws: new_overlap.append(w)
+			elif word not in dws: new_dutch.append(w)
+		else:error.append(w)
+	return new_dutch,new_frisian,new_overlap,error, words
+
+
+def label_lexicon(label, filename):
+	lexicon = [line for line in open(filename).read().split('\n') if line]
+	output = []
+	for line in lexicon:
+		word,pron = line.split('\t')
+		wordo = word +label
+		prono = ' '.join([p+label for p in pron.split(' ')])
+		output.append(wordo + '\t' + prono)
+	return '\n'.join(output)
+	
