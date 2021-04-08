@@ -56,6 +56,8 @@ class Label:
 		self.overlap = lexicons.get_overlap_wordset()
 
 	def label(self, text, extract_labels = False):
+		self.nfrisian_words = 0
+		self.ndutch_words = 0
 		if text == '': return False
 		self.sentences = text.split('\n')
 		self.pred_sentences = self.classifier_sentences.predict(self.sentences)
@@ -71,10 +73,14 @@ class Label:
 		for sentence_words, pred_sentence_words, pred_sentence in items: 
 			temp = [] 
 			for word, pred in zip(sentence_words,pred_sentence_words):
+				if word == '': continue
 				if word in self.overlap: temp.append( word + d[pred_sentence] )
 				else: temp.append( word + d[pred] )
+				if pred == 'Frisian':self.nfrisian_words +=1
+				elif pred == 'Dutch': self.ndutch_words +=1
 			self.labelled_sentences.append(' '.join(temp))
 		if extract_labels: self.extract_labels()
+		self.labelled_text = '\n'.join([s for s in self.labelled_sentences if s])
 		return True
 	
 	def extract_labels(self):
