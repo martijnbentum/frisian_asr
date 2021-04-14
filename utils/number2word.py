@@ -3,10 +3,10 @@ import sys
 hard_fail_global = None
 
 def frisian_numbers():
-	return open('../frisian_numbers').read().split('\n')
+	return open('../NUMBERS/frisian_numbers').read().split('\n')
 
 def dutch_numbers():
-	return open('../dutch_numbers').read().split('\n')
+	return open('../NUMBERS/dutch_numbers').read().split('\n')
 
 def number_dict(language = 'frisian'):
 	'''a number dict contains a digit and a word column; map digits to words.'''
