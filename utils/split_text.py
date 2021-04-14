@@ -1,6 +1,6 @@
 import random
 def split_text(text='',input_filename= '',
-	output_filename='',train = True,dev = True, ratio = .1):
+	output_filename='',train = True,dev = True, ratio = .1,save=True):
 	'''split a cleaned text into sections train, dev, test
 	text 				a text to be split into training dev test set
 	input_filename 		filename of a text to be split in training dev test set
@@ -32,12 +32,13 @@ def split_text(text='',input_filename= '',
 		end = start + int(r * len(sentences))
 		selected_indices = indices[start:end]
 		selected_sentences = extract_from_list(sentences,selected_indices)
-		with open(output_filename + '_' + names[i],'w') as fout:
-			fout.write('\n'.join(selected_sentences))
+		if save:
+			with open(output_filename + '_' + names[i],'w') as fout:
+				fout.write('\n'.join(selected_sentences))
 		output_sentences.append('\n'.join(selected_sentences))
 		output_indices.append('\n'.join(map(str,selected_indices)))
 		start = end
-	return output_sentences, output_indices
+	return output_sentences 
 	
 		
 
@@ -46,6 +47,18 @@ def extract_from_list(l,indices):
 	return [l[i] for i in indices]
 
 
-def create_dev_test_council_transcriptions():
-	return split_text(input_filename = '../LM/labels_with_tags.txt',
-		output_filename='../LM/council_transcriptions',train=False)
+def create_manual_transcriptions():
+	t = Text.objects.filter(text_type__name = 'manual transcription')
+	o = []
+	for x in t:
+		o.append(x.text_with_tags)
+	with open('../LM/manual_transcriptions','w') as fout:
+		fout.write('\n'.join(o))
+
+def create_train_dev_test_manual_transcriptions():
+	return split_text(input_filename = '../LM/manual_transcriptions',
+		output_filename='../LM/manual_transcriptions',train=True)
+
+def create_train_test_council_notes():
+	return split_text(input_filename = '../LM/council_notes_cleaned_labelled',
+		output_filename='../LM/council_notes',train=True,dev=False)
