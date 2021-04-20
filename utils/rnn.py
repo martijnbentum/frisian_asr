@@ -279,7 +279,7 @@ class Train():
 		if not hasattr(self,'trained'): self.train()
 		print('test')
 		self.eval_rnn.reset_state()
-		self.evaluator = extensions.Evaluator(self.test_iter, self.eval_model,device=device)
+		self.evaluator = extensions.Evaluator(self.test_iter, self.eval_model,device=self.device)
 		self.result = self.evaluator()
 		print('test perplexity:', np.exp(float(result['main/loss'])))
 
