@@ -59,8 +59,8 @@ class Text(models.Model):
 		text = re.sub('\s+',' ',text[:500])
 		t = text[:60] + '...' if len(text) > 60 else text
 		m =  s + ' | ' + t.ljust(65) + ' | ' + str(self.raw_word_count()) + ' words'
-		l = self.languages
-		if l: m += ' | ' + l
+		# l = self.languages
+		# if l: m += ' | ' + l
 		return m
 		
 
