@@ -48,9 +48,10 @@ spn = ',lipsmack,he,hè,eh,nies,hoest'
 spn = spn.split(',')
 
 
-filename_labels = '/vol/tensusers3/Frisiansubtitling/Downloads-Humainr/First_Batch_20210218/Transcriptions/labels.txt'
+filename_labels = '/vol/tensusers3/Frisiansubtitling/Downloads-Humainr/second_batch/labels.txt'
 filename_protocol= '/vol/tensusers3/Frisiansubtitling/Downloads-Humainr/First_Batch_20210218/Transcriptions/protocol_en_tags.txt'
 
+unknown_language= Language.objects.get(name='unknown')
 dutch = Language.objects.get(name='Dutch')
 frisian = Language.objects.get(name='Frisian')
 dutch_frisianized = Language.objects.get(name='Dutch_frisianized')
@@ -144,7 +145,8 @@ class Transcription:
 		self.start = float(self.start)
 		self.end = float(self.end)
 		self.duration = self.end - self.start
-		self.language = ld[self.l]
+		try:self.language = ld[self.l]
+		except: self.language = unknown_language
 		self.extract_brackets_and_words()
 
 	def __repr__(self):
@@ -188,7 +190,8 @@ class Transcription:
 
 	@property
 	def languages(self):
-		return list(set([w.language for w in self.words if w.language]))
+		return list(set([w.language for w in self.words if w.language and 
+			type(dutch) == type(w.language)]))
 
 	@property
 	def text_with_tags(self):
@@ -199,6 +202,7 @@ class Transcription:
 			if word.word == '$$': continue
 			if word.is_word and word.language: 
 				if word.language == 'frl-??': output.append('<spn>')
+				elif word.language and word.language.name == 'unknown': output.append('<spn>')
 				else: output.append(word.word + d[word.language])
 			else:output.append(word.word)
 		return ' '.join(output).lower()
@@ -346,10 +350,6 @@ class Bracket:
 		for w in self.tag_text.split(' '):
 			self.words.append(Word(w,self.language,True,self.tag))
 	
-
-
-
-	
 	
 def get_brackets(line):
 	line = line.replace('[eh]','<eh>')
@@ -382,3 +382,27 @@ def get_brackets(line):
 		words.append([w for w in chunk.split(' ') if w])
 	return brackets,line_without,words,error
 
+class Audio:
+	def __init__(self, audio_filename, texts):
+		self.audio_filename = audio_filename
+		self.texts = texts
+		self.nsegments = len(texts)
+		self.duration = round(sum([t.transcription.duration for t in texts]),2)
+		self.nwords = sum([len(t.transcription.words) for t in texts])
+
+	def __repr__(self):
+		m = self.audio_filename + ' ' + str(self.duration) + ' ' + str(self.nsegments)
+		m += ' ' + str(self.nwords)
+		return m
+
+def analyse_audio_recordings(wav_dict = None):
+	if not wav_dict:
+		wav_dict = {}
+		t = Text.objects.filter(source__name='frisian council transcripts')
+		for x in t:
+			if x.wav_filename not in wav_dict.keys(): wav_dict[x.wav_filename] = []
+			wav_dict[x.wav_filename].append(x)
+	audios = []
+	for key in wav_dict:
+		audios.append(Audio(key,wav_dict[key]))
+	return audios
