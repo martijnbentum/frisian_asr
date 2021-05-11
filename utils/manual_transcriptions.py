@@ -23,10 +23,16 @@ import progressbar as pb
 output_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/'
 
 def get_all_council_transcriptions_with_tags(error = False,save = False, with_original=False):
+	'''
+	save 		whether to save the file
+	with_orig.. whether to add the orginal label (for debugging) 
+	'''
 	tt = Text.objects.filter(source__name = 'frisian council transcripts').filter(error = error)
 	o = []
 	for t in tt:
-		o.append(t.transcription.line_with_tags)
+		#provides a line with wav filename start time end time label
+		line = t.transcription.line_with_tags
+		if line:o.append(line) #only append line if there is something in the label
 		if with_original:
 			o.append(t.transcription.line)
 			o.append('-'*9)
@@ -201,8 +207,8 @@ class Transcription:
 		for word in self.words:
 			if word.word == '$$': continue
 			if word.is_word and word.language: 
-				if word.language == 'frl-??': output.append('<spn>')
-				elif word.language and word.language.name == 'unknown': output.append('<spn>')
+				if word.language == 'frl-??': output.append('<UNK>')
+				elif word.language and word.language.name == 'unknown': output.append('<UNK>')
 				else: output.append(word.word + d[word.language])
 			else:output.append(word.word)
 		return ' '.join(output).lower()
@@ -229,8 +235,8 @@ class Transcription:
 		
 	@property
 	def line_with_tags(self):
+		if not self.text_with_tags: return False
 		return '\t'.join([self.wav,str(self.start),str(self.end),self.text_with_tags])
-			
 
 	@property
 	def dutch_words(self):
@@ -253,7 +259,7 @@ class Word:
 			if tag == '': tag = 'eh' 
 			language = ''
 			code_switched = False
-			word = '<spn>'
+			word = '<UNK>'
 		self.word = word
 		self.original_word = word
 		self.language = language
@@ -332,13 +338,13 @@ class Bracket:
 	def make_tagword(self):
 			label = ''
 			for item in nsn:
-				if item in self.tag_text: label = '<nsn>'
+				if item in self.tag_text: label = '<UNK>'
 			if not label:
 				for item in spn:
-					if item in self.tag_text: label = '<spn>'
+					if item in self.tag_text: label = '<UNK>'
 			if not label: 
-				print('could not categorize tag text:',self.tag_text,'setting word to nsn')
-				label = '<nsn>'
+				print('could not categorize tag text:',self.tag_text,'setting word to UNK')
+				label = '<UNK>'
 			self.words.append(Word(label,'',False,False))
 
 
