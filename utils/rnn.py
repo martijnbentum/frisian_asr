@@ -287,13 +287,27 @@ class Train():
 		# Serialize the final model
 		chainer.serializers.save_npz(args.model, model)
 
-def train_on_council():
+def train_on_council(epoch = 3, test = True):
 	train = open(lm.lm_dir + 'council_notes_manual_transcriptions_train').read()
 	dev = open(lm.lm_dir + 'manual_transcriptions_dev').read()
 	test = open(lm.lm_dir + 'manual_transcriptions_test').read()
 	# d = rnn.Data(filename = lm.lm_dir + 'council_notes_cleaned_labelled')
 	d = Data(train = train, dev = dev, test =test)
-	t = Train(data = d,device = 0,epoch = 10, model_filename='council')
+	t = Train(data = d,device = 0,epoch = epoch, test = test,model_filename='council')
+	return t
+
+def train_on_emre_dataset_and_new_council_materials(epoch = 39,test = False, 
+	model_filename='fame_council_rnn'):
+	x = '/home/eyilmaz/main/FAME/language_model/combine_models_2018/text/'
+	x += 'merged_real_CS_gen50M_fame_only_sad-sd-sl-res_sad-ld-sd-res_translated.txt'
+	emre_text_data_fame_filename = x
+	temp = open(emre_text_data_fame_filename).read()
+	train = open(lm.lm_dir + 'council_notes_manual_transcriptions_train').read()
+	train += temp
+	dev = open(lm.lm_dir + 'manual_transcriptions_dev').read()
+	test = open(lm.lm_dir + 'manual_transcriptions_test').read()
+	d = Data(train = train, dev = dev, test =test)
+	t = Train(data = d,device = 0,epoch = epoch, test = test,model_filename='council')
 	return t
 	
 
