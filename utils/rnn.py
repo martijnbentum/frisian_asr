@@ -10,6 +10,8 @@ import chainer.links as L
 from chainer import training
 from chainer.training import extensions
 import chainerx
+from chainer import serializers
+from chainer.backends import cuda
 
 from . import language_modelling as lm
 from . import split_text as st
@@ -281,11 +283,49 @@ class Train():
 		self.eval_rnn.reset_state()
 		self.evaluator = extensions.Evaluator(self.test_iter, self.eval_model,device=self.device)
 		self.result = self.evaluator()
-		print('test perplexity:', np.exp(float(result['main/loss'])))
+		print('test perplexity:', np.exp(float(self.result['main/loss'])))
 
 	def save(self):
 		# Serialize the final model
-		chainer.serializers.save_npz(args.model, model)
+		f = self.model_filename
+		if not '/' in f: f = '../LM/rnn/' + f
+		chainer.serializers.save_npz(f, self.model)
+
+def generate(model = None, model_filename= '../LM/rnn/council', vocab= None,  
+	seed_word = 'klapte-fr', nwords = 100, sample = True, device = 0):
+	if not model and not model_filename: return 'please provide model or model name'
+	if not vocab: vocab = load_integer_vocab()
+	if not model: model = load_model(model_filename,nvocab=len(vocab),device= device)
+	ivocab = {}
+	device = chainer.get_device(device)
+	device.use()
+	xp = device.xp
+	for key, val in vocab.items():
+		ivocab[val] = key
+	prev_word = chainer.Variable(xp.array([vocab[seed_word]],xp.int32), requires_grad=False)
+	m = seed_word 
+	for i in range(nwords):
+		if sample:
+			prob = F.softmax(model.predictor(prev_word))
+			probability = cuda.to_cpu(prob.array)[0].astype(np.float64)
+			probability /= np.sum(probability)
+			index = np.random.choice(range(len(probability)), p=probability)
+		else: index = np.argmax(cuda.to_cpu(prob.array))
+		m += ' ' + ivocab[index].split('-')[0]
+		prev_word = chainer.Variable(xp.array([index],xp.int32), requires_grad=False)
+	print(m)
+	return model, m
+
+
+def load_model(filename, n_units=650, nvocab = None,device = 0):
+	if not nvocab: nvocab = len(load_integer_vocab())
+	lm = RNNForLM(nvocab,n_units)
+	model = L.Classifier(lm)
+	serializers.load_npz(filename,model)
+	model.to_device(device)
+	model.predictor.reset_state()
+	return model
+	
 
 def train_on_council(epoch = 3, test = True):
 	train = open(lm.lm_dir + 'council_notes_manual_transcriptions_train').read()
