@@ -56,8 +56,11 @@ def create_manual_transcriptions():
 		fout.write('\n'.join(o))
 
 def create_train_dev_test_manual_transcriptions():
+	print('partition are part of the database for manual transcriptions, doing nothing')
+	'''OBSOLETE
 	return split_text(input_filename = '../LM/manual_transcriptions',
 		output_filename='../LM/manual_transcriptions',train=True)
+	'''
 
 def create_train_test_council_notes():
 	return split_text(input_filename = '../LM/council_notes_cleaned_labelled',
