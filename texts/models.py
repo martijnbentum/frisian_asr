@@ -43,11 +43,13 @@ class Text(models.Model):
 	error= models.BooleanField(default = False)
 	note= models.CharField(max_length=300,default='')
 	speaker_id = models.CharField(max_length=300,default='')
+	speaker_gender = models.CharField(max_length=300,default='')
 	start_time = models.FloatField(default = None,null=True)
 	end_time = models.FloatField(default = None,null=True)
 	wav_filename = models.CharField(max_length=1000,default='')
 	title = models.CharField(max_length=300,default='')
 	file_id= models.CharField(max_length=100,default='')
+	partition = models.CharField(max_length=20,default='')
 
 	def __repr__(self):
 		# f = self.filename.split('/')[-1] if self.filename else ''
@@ -89,4 +91,18 @@ class Text(models.Model):
 				self._transcription = Transcription(tableline,line_type = 'radio')
 			else: return 'not available, source is not a radio or council transcription'
 		return self._transcription
+
+	@property
+	def utterance_id(self):
+		wf = self.wav_filename.split('.wav')[0]
+		utt = wf + '_pk-' + add_zeros(self.pk)
+		if self.speaker_id: return self.speaker_id + '@-@' + utt
+		else: return wf + '@-@' + utt
+
+
+
+def add_zeros(n,output_length = 6):
+	sn = str(n)
+	return '0' * (output_length - len(sn)) + sn
+		
 		
