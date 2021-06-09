@@ -13,6 +13,7 @@ class Filemaker:
 		self.fame= 'frisian radio broadcasts'
 		self.partitions = 'train,dev,test'.split(',')
 		self._load_segments()
+		self.checked = False
 
 	def _load_segments(self):
 		corpora= 'fame,council'.split(',')
@@ -21,7 +22,21 @@ class Filemaker:
 			t = f(source__name = self.council) | f(source__name=self.fame)
 			setattr(self,partition,t.filter(partition = partition))
 
+	def _check(self):
+		for partition in self.partitions:
+			print('checking partition:',partition)
+			p = getattr(self,partition)
+			output,rejected = [],[]
+			for text in p:
+				if text.transcription.duration < 0.1 or not text.transcription.line_with_tags:
+					rejected.append(text)
+				else:output.append(text)
+			setattr(self,partition + '_rejected',rejected)
+			setattr(self,partition,output)
+		self.checked = True
+
 	def _make(self,make = 'text', save=False):
+		if not self.checked: self._check() 
 		if make == 'text': f = self._partition2text
 		elif make == 'wav.scp': f = self._partition2wavscp
 		elif make == 'segments': f = self._partition2segments
@@ -38,6 +53,12 @@ class Filemaker:
 				print('saving to ' + directory + make, len(output) , 'nlines')
 				with open(directory + make,'w') as fout:
 					fout.write('\n'.join(output))
+
+	def make_all(self,save=False):
+		self.make_text(save)
+		self.make_wav_scp(save)
+		self.make_segments(save)
+		self.make_utt2spk(save)
 
 	def make_text(self,save=False):
 		self._make(make='text',save=save)
