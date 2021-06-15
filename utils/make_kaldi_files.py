@@ -19,7 +19,8 @@ class Filemaker:
 		corpora= 'fame,council'.split(',')
 		for partition in self.partitions:
 			f = Text.objects.filter
-			t = f(source__name = self.council) | f(source__name=self.fame)
+			if partition == 'train': t = f(source__name = self.council) | f(source__name=self.fame)
+			else:t = f(source__name = self.council) #only use council materials for training
 			setattr(self,partition,t.filter(partition = partition))
 
 	def _check(self):
