@@ -118,4 +118,8 @@ def simple_clean(text):
 	tokenizer.process(text)
 	return '\n'.join(list(tokenizer.sentences()))
 
+def fix_whitespace(text):
+	'''this cleaning step was done much later when I discovered that Kaldi is particular
+	about whitespaces and the transcriptions contains whitespaces'''
+	return text.replace('\xa0',' ')
 
