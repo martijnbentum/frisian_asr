@@ -1,7 +1,10 @@
 f = '/vol/bigdata/corpora/CGN2/data/meta/text/speakers.txt'
 
-from files import make_tables
-from files import make_time
+from .files import make_tables
+from .files import make_time
+import random
+from tqdm import tqdm
+
 gender_dict = {'sex1':'male','sex2':'female'}
 
 speakers = [line.split('\t') for line in open(f).read().split('\n') if line]
@@ -10,13 +13,17 @@ col_names += ',language,firstLang,homeLang,workLang,resPlace,resRegion,eduPlace'
 col_names += ',eduRegion,eduSize,education,eduLevel,occupation,occLevel,notes'
 col_names = col_names.split(',')
 
-def make_speakers(tables = None):
+def make_speakers(tables = None, min_duration = 0, min_sr = 0, verbose = False, force_all =False):
+	'''creates a list of speakers based on tables (see files.py).
+	min_duration 	minimal duration for a segment to be included
+	min_sr 			minimal sample rate for a segment to be included
+	'''
 	if not tables: tables = make_tables()
 	output= []
-	for line in speakers[1:]:
-		s = Speaker(line, tables)
-		if not s.lines: 
-			print(s,'no audio')
+	for line in tqdm(speakers[1:]):
+		s = Speaker(line, tables,min_duration=min_duration, min_sr=min_sr)
+		if len(s.lines) < 2 and not force_all: 
+			if verbose: print(s,'no audio')
 			continue
 		output.append(s)
 	return output
@@ -24,12 +31,14 @@ def make_speakers(tables = None):
 		
 
 class Speaker:
-	def __init__(self,speaker_info, tables = None):
+	def __init__(self,speaker_info, tables = None, min_duration=0,min_sr=0):
 		self.speaker_info = speaker_info
+		self.min_duration = min_duration
+		self.min_sr = min_sr
 		s = speaker_info
 		self._set_info()
 		self.tables = []
-		self.lines = []
+		self.lines, self.rejected_lines = [], []
 		if tables: find_tables(self,tables)		
 
 
@@ -64,11 +73,19 @@ class Speaker:
 	def duration(self):
 		return make_time(self.seconds)
 
+	def sample(self,n = 1):
+		return random.sample(self.lines,n)
+
 
 
 def find_tables(speaker,tables):
 	for t in tables:
 		if speaker.id in t.speakers:
 			speaker.tables.append(t)
-			speaker.lines.extend(t.get_speaker_lines(speaker.id))
-			speaker.lines.extend(t.get_speaker_lines(speaker.id))
+			lines = t.get_speaker_lines(speaker.id)
+			for line in lines:
+				if line.duration >= speaker.min_duration and \
+						line.table.audio_info.sample_rate >= speaker.min_sr:
+					speaker.lines.append(line)
+				else: speaker.rejected_lines.append(line)
+
