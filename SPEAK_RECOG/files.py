@@ -3,13 +3,14 @@ import random
 import re
 import subprocess
 import os
+from tqdm import tqdm
 
+di= '/vol/tensusers/mbentum/FRISIAN_ASR/repo/SPEAK_RECOG/'
 
-table_dir= 'TABLES/'
+table_dir= di + 'TABLES/'
 audo_dir = '/vol/bigdata/corpora2/CGN2/data/audio/wav/'
-audio_info = dict([line.split('\t') for line in open('audio_info.txt').read().split('\n') if line])
+audio_info = dict([line.split('\t') for line in open(di+'audio_info.txt').read().split('\n') if line])
 ort_dir = '/vol/bigdata/corpora2/CGN2/data/annot/text/ort/'
-audios = make_audios()
 
 def make_audios():
 	audios = {}
@@ -19,11 +20,12 @@ def make_audios():
 	return audios
 
 
+
 def make_tables(d = table_dir,n = None):
 	fn = glob.glob(table_dir+ '*.Table')
 	if n: fn = random.sample(fn,n)
 	o, bad = [],[]
-	for f in fn:
+	for f in tqdm(fn):
 		t = Table(f)
 		if t.ok: o.append(t)
 		else: bad.append(t)
@@ -94,6 +96,7 @@ class Line:
 			self.end = float(temp[3])
 			self.ok = True
 			self.duration = self.end - self.start
+			self.seconds = self.duration
 		except: self.ok = False
 
 	def __repr__(self):
@@ -113,6 +116,19 @@ class Line:
 	@property
 	def region(self):
 		if self.table: return self.table.audio_info.region
+
+	@property
+	def start_frame(self):
+		return seconds2samples(self.start, self.table.audio_info.sample_rate)
+
+	@property
+	def nframes(self):
+		return seconds2samples(self.seconds, self.table.audio_info.sample_rate)
+
+	@property
+	def frames(self):
+		return self.start_frame, self.nframes
+
 
 class Audio:
 	def __init__(self,file_id):
@@ -185,4 +201,9 @@ def _make_tables_from_ort(fn = None):
 		os.system('gunzip ' + 'ORT/' + filename)
 		os.system('praat ort_2_table.praat ORT/' + filename.strip('.gz') + ' TABLES/')
 
+
+def seconds2samples(seconds, sample_rate):
+	return int(seconds * sample_rate)
+
+audios = make_audios()
 
