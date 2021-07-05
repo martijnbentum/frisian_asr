@@ -11,16 +11,18 @@ class Filemaker:
 		self.data_dir = data_dir
 		self.council = 'frisian council transcripts'
 		self.fame= 'frisian radio broadcasts'
+		self.cgn = 'cgn'
 		self.partitions = 'train,dev,test'.split(',')
 		self._load_segments()
 		self.checked = False
 
 	def _load_segments(self):
-		corpora= 'fame,council'.split(',')
+		# corpora= 'fame,council,cgn'.split(',')
 		for partition in self.partitions:
 			f = Text.objects.filter
-			if partition == 'train': t = f(source__name = self.council) | f(source__name=self.fame)
-			else:t = f(source__name = self.council) #only use council materials for training
+			if partition == 'train': 
+				t = f(source__name = self.council)|f(source__name=self.fame)|f(source__name=self.cgn)
+			else:t = f(source__name = self.council) #only use council materials for dev and test
 			setattr(self,partition,t.filter(partition = partition))
 
 	def _check(self):
@@ -89,6 +91,8 @@ class Filemaker:
 			elif text.source.name == self.fame:
 				if partition == 'dev': partition += 'el'
 				wav_filename = fame_wav_dir + partition + '/' + text.wav_filename
+			elif text.source.name == self.cgn:
+				wav_filename = text.wav_filename
 			else: raise ValueError(text.source.name + ' not recognized')
 			if not os.path.isfile(wav_filename):
 				raise ValueError(wav_filename + ' no file found')
