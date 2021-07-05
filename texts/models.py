@@ -89,6 +89,9 @@ class Text(models.Model):
 			elif self.source.name == 'frisian radio broadcasts': 
 				tableline = make_tableline_from_dict(self.transcription_meta)
 				self._transcription = Transcription(tableline,line_type = 'radio')
+			elif self.source.name == 'cgn': 
+				tableline = make_tableline_from_dict(self.transcription_meta)
+				self._transcription = Transcription(tableline,line_type = 'cgn')
 			else: return 'not available, source is not a radio or council transcription'
 		return self._transcription
 
