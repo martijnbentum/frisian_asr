@@ -73,10 +73,19 @@ class PyTorchPredictor(BasePredictor):
 		timestamp = np.array(spans) / self.sr
 		return timestamp, speakers, lines
 
-	def predict_meeting(self,meeting):
+	def _identify(self,embed):
+		embed = torch.cat(embed).cpu().numpy()
+		speakers=OptimizedAgglomerativeClustering(max_cluster= self.max_cluster).fit_predict(embed)
+		return speakers
+
+	def predict_meeting(self,meeting,subdivide = None):
 		wavs = meeting2wav_names(meeting)
 		spans,lines,embed = [],[],[]
-		for wav in wavs:
+		divide = 1
+		duration = 0
+		divide_name = 'divide_'
+		divide_list,timestamp,speakers = [],[],[]
+		for i,wav in enumerate(wavs):
 			path = mkf.council_wav_dir + wav
 			y = self._load(path, mfcc=False,wav_name=path)
 			nframes = y.shape[-1]
@@ -87,11 +96,19 @@ class PyTorchPredictor(BasePredictor):
 			print(min([x[1]-x[0] for x in sp]), 'min span', wav)
 			emb = [self._encode_segment(y, span,True) for span in sp]
 			embed.extend(emb)
-		print(len(spans),len(lines),len(embed))
-
+			duration += nframes/self.sr
+			if subdivide and (duration > subdivide or i == len(wavs)-1):
+				print(duration,len(spans),len(lines), divide, len(sp),len(li))
+				speakers.extend(self._identify(embed))
+				divide_list.extend([divide_name + str(divide)]* len(spans))
+				timestamp.extend( np.array(spans) / self.sr)
+				spans,embed = [],[]
+				duration = 0
+				divide += 1
+		print(len(spans),len(lines),len(embed),len(speakers))
+		if subdivide: return timestamp, speakers,lines, divide_list
 		embed = torch.cat(embed).cpu().numpy()
-		speakers = OptimizedAgglomerativeClustering(max_cluster= self.max_cluster).fit_predict(embed)
-		
+		speakers=self._identify(embed)
 		timestamp = np.array(spans) / self.sr
 		return timestamp, speakers, lines
 
@@ -185,7 +202,10 @@ def get_frisian_council_spans(texts, min_nframes=8000, frame_length_audio =None)
 def meeting2wav_names(meeting):
 	'''extract the set of unique audio files from a meeting.
 	a meeting was cut into distinct audio files'''
-	return list(set([text.wav_filename for text in meeting]))
+	wavs = []
+	for text in meeting:
+		if text.wav_filename not in wavs:wavs.append(text.wav_filename)
+	return wavs
 
 
 def wav_name2texts(wav_name,meeting=None, verbose = True,select = True):
@@ -206,6 +226,6 @@ def select_texts(texts,verbose=True):
 		if text.transcription.duration < 0.1 or not text.transcription.line_with_tags:
 			rejected.append(text)
 		else: output.append(text)
-	print('rejected:',len(rejected),'texts','Accepted',len(output),'texts')
+	if verbose:print('rejected:',len(rejected),'texts','Accepted',len(output),'texts')
 	return output
 
