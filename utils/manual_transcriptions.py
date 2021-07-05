@@ -1,5 +1,6 @@
 import glob
 import os
+import pickle
 import progressbar as pb
 import re
 import random
@@ -172,6 +173,15 @@ class Transcription:
 			self.l = line.language
 			self.start, self.end = line.start, line.end
 			self.text = line.label
+			self.line = line.__dict__
+			self.file_id = ''
+		if line_type == 'cgn':
+			self.wav = line.filename
+			self.l = 'NL'
+			self.start = line.start
+			self.end = line.end
+			self.text = line.label
+			self.file_id = line.file_id
 			self.line = line.__dict__
 		self.start = float(self.start)
 		self.end = float(self.end)
@@ -709,4 +719,53 @@ def find_partition(texts,train,dev,test, save = False):
 	print('train:',ntrain,train_count)
 	print('dev:',ndev,dev_count)
 	print('test:',len(test),test_count)
+
+
+def make_cgn_transcriptions(tables = None):
+	from SPEAK_RECOG import files, speakers
+	if not tables: tables = files.make_tables()
+	tables = [table for table in tables if table.audio_info.sample_rate >= 16000]
+	s2g= load_speaker2gender()
+	bar = pb.ProgressBar()
+	bar(range(len(tables)))
+	print('creating transcription objects for cgn')
+	output = []
+	for i,table in enumerate(tables):
+		bar.update(i)
+		for line in table.lines:
+			if line.speaker_id == 'BACKGROUND' or line.speaker_id == 'COMMENT':continue
+			line.file_id = line.table.file_id
+			line.gender = s2g[line.speaker_id] if line.speaker_id in s2g.keys() else ''
+			line.language = 'nl'
+			line.label = clean_text(line.text)
+			line.filename = line.audio_fn
+			output.append(Transcription(line,'cgn'))
+	return output
+
+def load_cgn_in_database(cgn_transcriptions = None, save = False):
+	if not cgn_transcriptions: cgn_transcriptions = make_cgn_transcriptions()
+	cgn_source = Source.objects.get(name= 'cgn')
+	text_type = TextType.objects.get(name = 'manual transcription')
+	output = []
+	bar = pb.ProgressBar()
+	bar(range(len(cgn_transcriptions)))
+	for i,t in enumerate(cgn_transcriptions):
+		bar.update(i)
+		error = t.get_bracket_error or t.bracket_error or t.tag_error
+		o =Text(filetype = 'txt',raw_text = t.text, transcription_meta = t.line, 
+			main_language = t.language, source = cgn_source, text_type= text_type,
+			start_time = t.start, end_time = t.end, wav_filename = t.wav,
+			multiple_languages = False, error = error, file_id = t.file_id,
+			speaker_id = t.line['speaker_id'],speaker_gender = t.line['gender'])
+		if save:o.save()
+		output.append(o)
+	return output
+
+def load_speaker2gender():
+	return pickle.load(open('speakers2gender','rb'))
+
+def clean_text(text):
+	for char in '.,?!:;':
+		text =text.replace(char,'')
+	return text 
 
