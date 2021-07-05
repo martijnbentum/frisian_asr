@@ -4,6 +4,7 @@ from texts.models import Text
 from . import prefix_meeting_names as pmn
 pmn = pmn.prefix_meeting_names
 from SPEAK_RECOG import predict
+import tqdm
 
 
 
@@ -19,14 +20,16 @@ def make_pmn_dict():
 	return d
 
 
-def meeting2speakerids(meeting,p, meeting_name, save = False): 
-	timestamps, speakers, texts= p.predict_meeting(meeting)
+def meeting2speakerids(meeting,p, meeting_name, save = False, subdivide= 300): 
+	if subdivide: timestamps,speakers,texts,subdivide_list=p.predict_meeting(meeting,subdivide)
+	else:timestamps, speakers, texts= p.predict_meeting(meeting)
 	assert len(speakers) == len(texts)
 	speaker2text, text2speaker = {},{}
 	for i,text in enumerate(texts):
 		speaker_num = str(speakers[i])
 		speaker_num = '0' + speaker_num if len(speaker_num) == 1 else speaker_num
-		speaker_id = meeting_name + '_speaker_'+ speaker_num
+		subdivide_name = '_' + subdivide_list[i] if subdivide_list else ''
+		speaker_id = meeting_name + subdivide_name + '_speaker_'+ speaker_num
 		text2speaker[text.pk] = speaker_id
 		if speaker_id not in speaker2text.keys(): speaker2text[speaker_id] = [] 
 		speaker2text[speaker_id].append(text.pk)
@@ -37,7 +40,8 @@ def meeting2speakerids(meeting,p, meeting_name, save = False):
 		
 
 
-def classify_speakers(model_dir = "cgn_speaker_model_v3/", device=1, save = False, start_index = None):
+def classify_speakers(model_dir = "cgn_speaker_model_v3/", device=1, save = False, 
+	start_index = None,subdivide=300):
 	p = predict.PyTorchPredictor(model_dir + "configs.pth", 
 		model_dir + "weights_best.pth",device=device)
 	pmnd = make_pmn_dict()
@@ -49,7 +53,7 @@ def classify_speakers(model_dir = "cgn_speaker_model_v3/", device=1, save = Fals
 				print('skipping:',k)
 				continue
 		meeting = pmnd[k]
-		text2speaker,speaker2text,texts = meeting2speakerids(meeting,p,k,save)
+		text2speaker,speaker2text,texts = meeting2speakerids(meeting,p,k,save, subdivide)
 		d[k] = [text2speaker, speaker2text, texts]
 	return d
 
@@ -92,3 +96,18 @@ def classify_speakers_wav(model_dir = "cgn_speaker_model_v3/", device=1,
 	return d
 	
 
+def texts_per_wav():
+	fn = glob.glob(mkf.council_wav_dir +'*.wav')
+	d = {}
+	count = []
+	for f in fn:
+		wav_name = f.split('/')[-1]
+		texts = predict.wav_name2texts(wav_name,meeting=None, verbose = True,select = True)
+		d[wav_name] = texts
+		count.append(len(texts))
+	return d, count
+
+
+
+
+	 
