@@ -242,8 +242,8 @@ class Transcription:
 		for word in self.words:
 			if word.word == '$$': continue
 			if word.is_word and word.language: 
-				if word.language == 'frl-??': output.append('<UNK>')
-				elif word.language and word.language.name == 'unknown': output.append('<UNK>')
+				if word.language == 'frl-??': output.append('<spn>')
+				elif word.language and word.language.name == 'unknown': output.append('<spn>')
 				else: output.append(word.word + d[word.language])
 			else:output.append(word.word)
 		return ' '.join(output).lower()
@@ -294,7 +294,7 @@ class Word:
 			if tag == '': tag = 'eh' 
 			language = ''
 			code_switched = False
-			word = '<UNK>'
+			word = '<spn>'
 		self.word = word
 		self.original_word = word
 		self.language = language
@@ -373,13 +373,13 @@ class Bracket:
 	def make_tagword(self):
 			label = ''
 			for item in nsn:
-				if item in self.tag_text: label = '<UNK>'
+				if item in self.tag_text: label = '<nsn>'
 			if not label:
 				for item in spn:
-					if item in self.tag_text: label = '<UNK>'
+					if item in self.tag_text: label = '<nsn>'
 			if not label: 
-				print('could not categorize tag text:',self.tag_text,'setting word to UNK')
-				label = '<UNK>'
+				print('could not categorize tag text:',self.tag_text,'setting word to spn')
+				label = '<spn>'
 			self.words.append(Word(label,'',False,False))
 
 
