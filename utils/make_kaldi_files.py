@@ -1,14 +1,16 @@
 from utils import manual_transcriptions as mt
 from texts.models import Text
 import os
+from SPEAK_RECOG import files
 
 data_dir = '/vol/tensusers3/Frisiansubtitling/COUNCIL/data/'
 council_wav_dir = '/vol/tensusers3/Frisiansubtitling/COUNCIL/wav/'
 fame_wav_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/corpus/fame/wav/'
 
 class Filemaker:
-	def __init__(self,data_dir = data_dir):
+	def __init__(self,data_dir = data_dir, use_cgn_train = False):
 		self.data_dir = data_dir
+		self.use_cgn_train = use_cgn_train
 		self.council = 'frisian council transcripts'
 		self.fame= 'frisian radio broadcasts'
 		self.cgn = 'cgn'
@@ -21,7 +23,10 @@ class Filemaker:
 		for partition in self.partitions:
 			f = Text.objects.filter
 			if partition == 'train': 
-				t = f(source__name = self.council)|f(source__name=self.fame)|f(source__name=self.cgn)
+				if self.use_cgn_train:
+					t=f(source__name = self.council)|f(source__name=self.fame)|f(source__name=self.cgn)
+				else:
+					t=f(source__name = self.council)|f(source__name=self.fame)
 			else:t = f(source__name = self.council) #only use council materials for dev and test
 			setattr(self,partition,t.filter(partition = partition))
 
@@ -92,9 +97,14 @@ class Filemaker:
 				if partition == 'dev': partition += 'el'
 				wav_filename = fame_wav_dir + partition + '/' + text.wav_filename
 			elif text.source.name == self.cgn:
-				wav_filename = text.wav_filename
+				nchannels = files.audios[text.file_id].channels
+				if nchannels == 2: 
+					wav_filename = 'sox -t wav ' + text.wav_filename + ' -b 16 -t wav - remix - |'
+				else:wav_filename = text.wav_filename
 			else: raise ValueError(text.source.name + ' not recognized')
-			if not os.path.isfile(wav_filename):
+			if text.source.name == self.cgn and not os.path.isfile(text.wav_filename):
+				raise ValueError(wav_filename + ' no file found')
+			elif not os.path.isfile(wav_filename):
 				raise ValueError(wav_filename + ' no file found')
 			output.append(text.wav_filename+ ' ' + wav_filename)
 		return output
