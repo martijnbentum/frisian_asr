@@ -10,6 +10,7 @@ f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/final_lexicon_emre.txt'
 twente_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/twente_lexicon.txt'
 frisian_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/Frysk.txt'
 council_f = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/lexicon_frisian_dutch_council.txt'
+council_f_old = '/vol/tensusers/mbentum/FRISIAN_ASR/LEXICONS/lexicon_frisian_dutch_council_old.txt'
 council_cleaned_labelled = '/vol/tensusers/mbentum/FRISIAN_ASR/LM/council_notes_cleaned_labelled'
 
 class Lexicon:
@@ -19,12 +20,18 @@ class Lexicon:
 		self.prons= prons
 		self.name = name
 		self.labelled = labelled
-		if prons and len(words) == len(prons): 
-			self.word2pron = dict([[word,pron] for word, pron in zip(words,prons)])
-		else:self.word2pron = {}
+		self._make_word2pron()
 
-	def word2pron(self):
-		pass
+	def _make_word2pron(self):
+		self.word2pron = {}
+		self.pron2word= {}
+		if not self.prons or len(self.words) != len(self.prons): return False
+		for i,word in enumerate(self.words):
+			pron = self.prons[i]
+			if word not in self.word2pron.keys(): self.word2pron[word] = []
+			if pron not in self.pron2word.keys(): self.pron2word[pron] = []
+			self.word2pron[word].append(pron)
+			self.pron2word[pron].append(word)
 
 	def __repr__(self):
 		m ='Lexicon: ' + self.language + ' ' + str(len(self.words))
@@ -61,6 +68,9 @@ def council_lexicon():
 	t, words, prons, errors = read_pronlex(council_f)
 	return Lexicon(words,'Dutch, Frisian',prons,'council',labelled = True)
 
+def council_lexicon_old():
+	t, words, prons, errors = read_pronlex(council_f_old)
+	return Lexicon(words,'Dutch, Frisian',prons,'council_old',labelled = True)
 
 
 
@@ -89,6 +99,7 @@ def read_frisian_lexicon():
 def make_dutch_and_frisian_lexicon(lexicon_type = 'fame'):
 	if lexicon_type == 'fame':filename = f
 	elif lexicon_type == 'council': filename= council_f
+	elif lexicon_type == 'council_old': filename= council_f_old
 	else: raise ValueError(lexicon_type,'uknown use fame or council')
 	print('creating lexicon:',lexicon_type)
 	cw,cp,l,t,w,p,e = read_frisian_dutch_lexicon(filename)
@@ -235,8 +246,8 @@ def make_freq_dict(tokenized_text):
 	return d
 
 def get_freq_arf(filename_text = council_cleaned_labelled, text = None, 
-	'''get frequency and arf for all words in a text. Arf computation time is not great'''
 	load_filename = '', use_rf = False):
+	'''get frequency and arf for all words in a text. Arf computation time is not great'''
 	if load_filename: return load_arf_file(load_filename)
 	if not text:
 		text = open(filename_text).read().replace('\n',' ').split(' ')
