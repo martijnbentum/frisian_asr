@@ -44,6 +44,7 @@ def make(normal = True, cgn = False, fame_dev_test = True,language_split = True,
 		f_ls = Filemaker(language_split =True)
 		f_ls.make_all(save=save)
 		output['normal_ls'] = f_ls
+	return output
 	
 	
 	
@@ -121,10 +122,10 @@ class Filemaker:
 		self.checked = True
 
 	def _check_language_split(self,text):
-		if '-nl' and '-fr' in text.transcription.text_with_tags: return 'mx'
-		if '-nl' in text.transcription.text_with_tags: return 'nl'
-		if '-fr' in text.transcription.text_with_tags: return 'fr'
-		print(text.transcription.text_with_tags)
+		t = text.transcription.text_with_tags
+		if '-nl' in t and '-fr' in t: return 'mx'
+		if '-nl' in t: return 'nl'
+		if '-fr' in t: return 'fr'
 		return 'unk'
 
 	def _make(self,make = 'text', save=False):
