@@ -86,10 +86,11 @@ class Filemaker:
 					t=f(source__name=self.council)|f(source__name=self.fame)|f(source__name=self.cgn)
 				else:
 					t=f(source__name = self.council)|f(source__name=self.fame)
-			if self.fame_dev_test:
-				t=f(source__name=self.fame)
-			#only use council materials for dev and test
-			else:t = f(source__name = self.council) 
+			else:
+				if self.fame_dev_test:
+					t=f(source__name=self.fame)
+				#only use council materials for dev and test
+				else:t = f(source__name = self.council) 
 			setattr(self,partition,t.filter(partition = partition))
 
 	def _check(self):
@@ -136,11 +137,12 @@ class Filemaker:
 		elif make == 'segments': f = self._partition2segments
 		elif make == 'utt2spk': f = self._partition2utt2spk
 		else: raise ValueError(make + ' unknown')
-		extra = 'fame_' if self.fame_dev_test else ''
-		extra = 'cgn_' if self.use_cgn_train else ''
+		if self.fame_dev_test: extra = 'fame_'
+		elif self.use_cgn_train: extra = 'cgn_'
+		else: extra = ''
 		for partition in self.partitions:
 			directory = self.data_dir + extra + partition + '/'
-			print( 'making ' + make + ' for ' + partition )
+			print( 'making ' + make + ' for ' + partition, 'extra:',extra)
 			if save and not os.path.isdir(directory) and not self.language_split:
 				os.mkdir(directory)
 			if self.language_split: 
