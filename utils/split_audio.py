@@ -2,11 +2,12 @@
 split an audio file into non silence chunks
 code assumes mono sound
 '''
-
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import sys
+import argparse
 
 def load_audio(filename, sample_rate=None):
 	np_array, sample_rate = librosa.load(filename,sr=sample_rate)
@@ -148,9 +149,9 @@ def make_kaldi_recources(audio_filename, chunks= None, speaker_names = None,
 def make_segments(audio_filename, chunks, speaker_names):
 	output = []
 	for chunk, name in zip(chunks, speaker_names):
-		print(chunk)
 		start, end = chunk
-		line = name + '-' + audio_filename.split('.')[0] + ' ' + audio_filename
+		line = name + '-' + '.'.join(audio_filename.split('.')[:-1]) 
+		line += ' ' + audio_filename
 		line += ' ' + str(start) + ' ' + str(end)
 		output.append(line)
 	return output
@@ -161,7 +162,7 @@ def make_wavscp(audio_filename):
 def make_utt2spk(audio_filename,speaker_names):
 	output = []
 	for name in speaker_names:
-		line = name + '-' + audio_filename.split('.')[0] + ' ' + name
+		line = name + '-' + '.'.join(audio_filename.split('.')[:-1]) + ' ' + name
 		output.append(line)
 	return output
 	
@@ -169,7 +170,7 @@ def make_utt2spk(audio_filename,speaker_names):
 def save(t, name, directory, force_save = False):
 	if type(t) == list: t = '\n'.join(t)
 	filename = directory + name
-	if os.path.isfile and not force_save:
+	if os.path.isfile(filename) and not force_save:
 		print(filename,'already exists and no force save, doing nothing')
 		return
 	with open(directory + name,'w') as fout:
@@ -178,6 +179,25 @@ def save(t, name, directory, force_save = False):
 
 		
 	
+if __name__ == "__main__":
+	p= argparse.ArgumentParser(description="create kaldi resources for decoding")
+	p.add_argument('fn',metavar="audio filename",type=str,
+		help="audio file to decode")
+	p.add_argument('-d',metavar="goal dir",type=str,
+		help="directory to story kaldi resource files", required = False)
+	p.add_argument('--force',action="store_true",
+		help="whether to overwrite excisting resource files", required = False)
+	args = p.parse_args()
+	if not args.fn or not os.path.isfile(args.fn):
+		print('please provide a filename to an audio file:',args.fn,'does not exist')
+		sys.exit()
+	if args.d != None and not os.path.isdir(args.d):
+		print('please provide an existing directory:',args.d,'does not exist')
+	if args.d == None: args.d = ''
+	make_kaldi_recources(audio_filename = args.fn, goal_dir = args.d, 
+		force_save=args.force)
+
+
 
 
 
