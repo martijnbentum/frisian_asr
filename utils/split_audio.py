@@ -173,7 +173,8 @@ def save(t, name, directory, force_save = False):
 	if os.path.isfile(filename) and not force_save:
 		print(filename,'already exists and no force save, doing nothing')
 		return
-	with open(directory + name,'w') as fout:
+	print('saving:',filename)
+	with open(filename,'w') as fout:
 		fout.write(t)
 	
 
