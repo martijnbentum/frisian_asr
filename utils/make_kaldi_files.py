@@ -46,8 +46,6 @@ def make(normal = True, cgn = False, fame_dev_test = True,language_split = True,
 		output['normal_ls'] = f_ls
 	return output
 	
-	
-	
 
 data_dir = '/vol/tensusers3/Frisiansubtitling/COUNCIL/data/'
 council_wav_dir = '/vol/tensusers3/Frisiansubtitling/COUNCIL/wav/'
@@ -56,7 +54,8 @@ fame_wav_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/corpus/fame/wav/'
 class Filemaker:
 	'''create kaldi resources.'''
 	def __init__(self,data_dir = data_dir, use_cgn_train = False, 
-		language_split = False,fame_dev_test = False):
+		language_split = False,fame_dev_test = False, only_train = False,
+		remove_labels = False):
 		'''
 		data_dir 		council data dir - directory resources are saved to
 		use_cgn_train 	whether to use cgn data in training
@@ -70,7 +69,10 @@ class Filemaker:
 		self.council = 'frisian council transcripts'
 		self.fame= 'frisian radio broadcasts'
 		self.cgn = 'cgn'
-		if language_split or self.fame_dev_test: 
+		self.only_train = only_train
+		self.remove_labels = remove_labels
+		if only_train: self.partitions=['train']
+		elif self.fame_dev_test: 
 			self.partitions = 'dev,test'.split(',')
 		else:self.partitions = 'train,dev,test'.split(',')
 		self._load_segments()
@@ -194,8 +196,9 @@ class Filemaker:
 		else: p = getattr(self,partition)
 		output = []
 		for text in p:
-			output.append(text.utterance_id + ' ' +
-				text.transcription.text_with_tags)
+			if self.remove_labels:t = text.transcription.text_without_tags 
+			else: t= text.transcription.text_with_tags
+			output.append(text.utterance_id + ' ' + t)
 		return output
 			
 	def _partition2wavscp(self,partition, l = None):
