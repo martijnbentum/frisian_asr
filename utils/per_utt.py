@@ -1,12 +1,13 @@
 import os
+from texts.models import Text
 
 directory = '/vol/tensusers/mbentum/FRISIAN_ASR/PER_UTT/'
+f_council_tags = directory + 'per_utt_council_tags'
+f_council_no_tags = directory + 'per_utt_council_no_tags'
+f_fame_tags = directory + 'per_utt_fame_tags'
+f_fame_no_tags = directory + 'per_utt_fame_no_tags'
 
 def make_utterances():
-	f_council_tags = directory + 'per_utt_council_tags'
-	f_council_no_tags = directory + 'per_utt_council_no_tags'
-	f_fame_tags = directory + 'per_utt_fame_tags'
-	f_fame_no_tags = directory + 'per_utt_fame_no_tags'
 	uct = Utterances(f_council_tags)
 	ucnt = Utterances(f_council_no_tags)
 	ucnt.set_language(uct.id2language)
@@ -192,7 +193,8 @@ class Utterance:
 			self.words.append(Word(ref_word,hyp_word,evaluation,self.ide))
 
 	def _compute_wer(self):
-		self.nwords_ref = len([w for w in self.ref.split(' ') if w != '***'])
+		if not self.ref: self.nwords_ref = 0
+		else:self.nwords_ref = len([w for w in self.ref.split(' ') if w != '***'])
 		self.nerrors = self.nsubstitutions + self.ninsertions +self.ndeletions
 		if self.nwords_ref == 0: self.wer = 0.0
 		else: self.wer = round(100 * self.nerrors / self.nwords_ref, 2)
@@ -229,3 +231,21 @@ def _make_evaluation(evaluation):
 	for x in evaluation.split(' '):
 		if x in ['C','I','S','D']: o.append(x)
 	return o
+
+
+def make_subtitle_output(utterances):
+	o, e  = [], []
+	for x in utterances.utterances:
+		if not x.hyp: continue
+		t = Text.objects.get(pk=x.ide)
+		start = str(t.start_time)
+		end = str(t.end_time)
+		meeting = t.file_id
+		wav_fn = t.wav_filename
+		language = x.language
+		evaluation = ' '.join(x.evaluation)
+		o.append([str(t.pk),meeting,wav_fn,language,start,end,x.hyp])
+		e.append([str(t.pk),meeting,wav_fn,language,start,end,evaluation])
+	return o,e 
+
+
