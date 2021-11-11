@@ -212,6 +212,7 @@ class Transcription:
 				if b.error:continue
 				self.words.extend(b.words)
 				i +=1
+	
 
 	@property
 	def code_switched(self):
@@ -287,6 +288,8 @@ class Transcription:
 			if word.language in [frisian,frisian_dutchized]: o.append(word)
 		return o
 
+
+	
 
 class Word:
 	def __init__(self,word,language, code_switched,tag = '',is_word = True):
