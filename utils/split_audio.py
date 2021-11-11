@@ -25,15 +25,20 @@ def split_audio(filename, min_duration = .2, top_db = 30, ref = make_ref):
 	min_duration  		the minimal length of silence
 	top_db 				the db below the ref to be considered silence
 						higher values will accept more material as non silent
-	ref 				the reference value to subtract top_db from for silence threshold
+	ref 				the reference value to subtract top_db from for silence 
+						threshold
 	'''
 	x, sr = load_audio(filename)
 	frame_length = duration2nframes(min_duration,sr)
-	return librosa.effects.split(x, frame_length=frame_length, top_db=top_db, ref=ref)
+	o=librosa.effects.split(x, frame_length=frame_length, top_db=top_db, ref=ref)
+	return o
 
-def spectogram(filename, boundaries = None, add_boundaries = True, start = None, end = None):
-	'''plot spectogram of audio marking boundaries between silence and non silence. 
-	boundaries can be provided or if non provided but add boundaries == true they will be computed
+def spectogram(filename, boundaries = None, add_boundaries = True, start = None, 
+	end = None):
+	'''plot spectogram of audio marking boundaries between silence and 
+	non silence. 
+	boundaries can be provided or if non provided but add boundaries == true 
+	they will be computed
 	start and end can be used to select a section of audio, should be in seconds
 	'''
 	plt.figure()
@@ -46,9 +51,11 @@ def spectogram(filename, boundaries = None, add_boundaries = True, start = None,
 		boundaries = boundaries.flatten()
 		[plt.vlines(x,0,8000,colors = 'b') for x in boundaries]
 
-def plot(filename, boundaries = None, add_boundaries = True, start = None, end = None):
+def plot(filename, boundaries = None, add_boundaries = True, start = None, 
+	end = None):
 	'''plot waveform of audio marking non silent audio with color
-	boundaries can be provided or if non provided but add boundaries == true they will be computed
+	boundaries can be provided or if non provided but add boundaries == true 
+	they will be computed
 	start and end can be used to select a section of audio, should be in seconds
 	'''
 	plt.figure()
@@ -82,13 +89,17 @@ def split2silence_duration(split, audio, sample_rate):
 	o = split2silence_frames(split,audio)
 	return o / sample_rate
 
-def make_non_silent_chunks(audio_filename, max_extra_silence = 1, split = None):
+def make_non_silent_chunks(audio_filename, max_extra_silence = 1, split = None,
+	minimum_silence_duration = 0.2):
 	'''creates an np array of start,end points in seconds of non silent audio.
 	max_extra_silence 		the maximum extra silence before or after a chunk
-	split 					optional split (output from split_audio) for non default splits
+	split 					optional split (output from split_audio) for non default 
+							splits
 	'''
 	audio, sample_rate = load_audio(audio_filename)
-	if not split: split= split_audio(filename = audio_filename)
+	if not split: 
+		split= split_audio(filename = audio_filename,
+			min_duration = minimum_silence_duration)
 	split_duration = split / sample_rate
 	silence_duration = split2silence_duration(split, audio, sample_rate)
 	output = np.zeros(split_duration.shape ,dtype = split_duration.dtype)
@@ -102,7 +113,7 @@ def make_non_silent_chunks(audio_filename, max_extra_silence = 1, split = None):
 
 def make_silent_chunks(audio_filename, split = None):
 	'''creates an np array of start,end point in secods of silent audio.
-	split 					optional split (output from split_audio) for non default splits
+	split 		optional split (output from split_audio) for non default splits
 	'''
 	audio, sample_rate = load_audio(audio_filename)
 	if not split: split = split_audio(filename = audio_filename)
@@ -129,14 +140,17 @@ def make_speaker_names(nspeakers):
 	return output
 
 def make_kaldi_recources(audio_filename, chunks= None, speaker_names = None,
-	make_chunks= make_non_silent_chunks, goal_dir = '', force_save = False):
+	make_chunks= make_non_silent_chunks, goal_dir = '', force_save = False,
+	minimum_silence_duration= 0.2):
 	'''create kaldi files for decoding
-	audio_filename 			 filename that needs to be decoded
-	chunks 					 start end point in seconds for non silent chunks in audio
-							 if false the whole audio will be used as one chunk
+	audio_filename 			filename that needs to be decoded
+	chunks 					start end point in seconds for non silent chunks in audio
+							if false the whole audio will be used as one chunk
 	'''
 	if chunks == False: chunks = make_single_chunk(audio_filename)
-	elif chunks == None: chunks = make_chunks(audio_filename)
+	elif chunks == None: 
+		chunks = make_chunks(audio_filename,
+			minimum_silence_duration = minimum_silence_duration)
 	if not speaker_names: speaker_names = make_speaker_names(len(chunks))
 	segments = make_segments(audio_filename,chunks,speaker_names)
 	wavscp = make_wavscp(audio_filename)
@@ -149,6 +163,7 @@ def make_kaldi_recources(audio_filename, chunks= None, speaker_names = None,
 def make_segments(audio_filename, chunks, speaker_names):
 	output = []
 	for chunk, name in zip(chunks, speaker_names):
+		audio_filename = audio_filename.split('/')[-1]
 		start, end = chunk
 		line = name + '-' + '.'.join(audio_filename.split('.')[:-1]) 
 		line += ' ' + audio_filename
@@ -157,11 +172,12 @@ def make_segments(audio_filename, chunks, speaker_names):
 	return output
 
 def make_wavscp(audio_filename):
-	return audio_filename + ' ' + audio_filename
+	return audio_filename.split('/')[-1] + ' ' + audio_filename
 
 def make_utt2spk(audio_filename,speaker_names):
 	output = []
 	for name in speaker_names:
+		audio_filename = audio_filename.split('/')[-1]
 		line = name + '-' + '.'.join(audio_filename.split('.')[:-1]) + ' ' + name
 		output.append(line)
 	return output
@@ -188,6 +204,11 @@ if __name__ == "__main__":
 		help="directory to story kaldi resource files", required = False)
 	p.add_argument('--force',action="store_true",
 		help="whether to overwrite excisting resource files", required = False)
+	p.add_argument('--no_split',action="store_true",
+		help="whether to split the audio file on silence", required = False)
+	p.add_argument('-minimum_silence_duration',type=float,
+		help="sets minimum duration audio chunks, default is 0.2 seconds", 
+		required = False)
 	args = p.parse_args()
 	if not args.fn or not os.path.isfile(args.fn):
 		print('please provide a filename to an audio file:',args.fn,'does not exist')
@@ -195,8 +216,17 @@ if __name__ == "__main__":
 	if args.d != None and not os.path.isdir(args.d):
 		print('please provide an existing directory:',args.d,'does not exist')
 	if args.d == None: args.d = ''
+	chunks = False if args.no_split else None
+	if  not args.minimum_silence_duration:
+		minimum_silence_duration = 0.2
+	elif type(args.minimum_silence_duration) != float:
+		print('could not process',args.minimum_silence_duration,'should be float')
+		minimum_silence_duration = 0.2
+	else: minimum_silence_duration = args.minimum_silence_duration
+	print('minimum_silence_duration is:',minimum_silence_duration)
 	make_kaldi_recources(audio_filename = args.fn, goal_dir = args.d, 
-		force_save=args.force)
+		force_save=args.force, chunks = chunks, 
+		minimum_silence_duration = minimum_silence_duration)
 
 
 
