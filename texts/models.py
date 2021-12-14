@@ -35,8 +35,10 @@ class Text(models.Model):
 	raw_text = models.TextField(default='')
 	clean_text = models.TextField(default='')
 	transcription_meta= models.TextField(default='')
-	main_language =  models.ForeignKey(Language, **dargs,related_name = 'main_language')
-	all_languages = models.ManyToManyField(Language,blank=True, related_name = 'all_languages')
+	main_language =  models.ForeignKey(Language, **dargs,
+		related_name = 'main_language')
+	all_languages = models.ManyToManyField(Language,blank=True, 
+		related_name = 'all_languages')
 	multiple_languages = models.BooleanField(default = False)
 	source=  models.ForeignKey(Source, **dargs)
 	text_type = models.ForeignKey(TextType, **dargs)
@@ -50,6 +52,8 @@ class Text(models.Model):
 	title = models.CharField(max_length=300,default='')
 	file_id= models.CharField(max_length=100,default='')
 	partition = models.CharField(max_length=20,default='')
+	duration = models.FloatField(default = None,null=True)
+	text_without_tags = models.TextField(default='')
 
 	def __repr__(self):
 		# f = self.filename.split('/')[-1] if self.filename else ''
