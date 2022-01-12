@@ -54,6 +54,7 @@ class Text(models.Model):
 	partition = models.CharField(max_length=20,default='')
 	duration = models.FloatField(default = None,null=True)
 	text_without_tags = models.TextField(default='')
+	n_words_text_without_tags = models.PositiveIntegerField(null=True,blank=True)
 
 	def __repr__(self):
 		# f = self.filename.split('/')[-1] if self.filename else ''
