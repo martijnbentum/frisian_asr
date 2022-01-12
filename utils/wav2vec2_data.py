@@ -14,6 +14,9 @@ from .wav2vec2_make_file import load_audio_section
 from typing import Any, Dict, List, Optional, Union
 
 chars_to_remove_regex = '[\,\?\.\!\-\;\:\"\“\%\‘\”\�\\u200b\$\’\´\`\'0-9]'
+letter_diacritics_removal_dict={'ö':'o','ä':'a','à':'a','ü':'u','ù':'u','ó':'o'}
+letter_diacritics_removal_dict.update({'è':'e','ï':'i','ë':'e','é':'e'})
+
 vocab_dir= '../wav2vec2data/'
 cache_dir = '../wav2vec2data/'
 vocab_filename = vocab_dir + 'vocab.json'
@@ -52,8 +55,12 @@ def _load_audio_council(item):
 	item['audio']['sampling_rate'] = 16000
 	return item
 
-def load_council(clean_text = True, cache_dir = cache_dir,split='train,dev,test',
+def load_council(clean_text = False, cache_dir = cache_dir,split='train,dev,test',
 	load_audio = True):
+	''' 
+	load council
+	council dataset texts are already cleaned in w2v2 make_file.
+	'''
 	d = {}
 	for x in split.split(','):
 		data_file = cache_dir+'council_'+x+'.json'
@@ -78,27 +85,17 @@ def show_sample_dataset(dataset, return_sample = False, verbose=True):
 	if return_sample or not verbose:return sample
 
 def remove_special_characters(item):
-	item['sentence'] = re.sub(chars_to_remove_regex,'',item['sentence']).lower()
+	s = item['sentence']
+	s = re.sub(chars_to_remove_regex,'',s).lower()
+	for key, value in letter_diacritics_removal_dict.items():
+		s = re.sub(key,value,s)
+	item['sentence']
 	return item
 
 def clean_dataset_transcriptions(dataset):
 	dataset = dataset.map(remove_special_characters)
 	return dataset
 
-def make_vocab_dict(datasets, save=True):
-	sentences = []
-	for ds in datasets.values():
-		for item in ds:
-			sentences.append(item['sentence'])
-	sentences = ' '.join(sentences)
-	vocab = list(set(sentences))
-	vocab_dict = {v: k for k, v in enumerate(sorted(vocab))}
-	vocab_dict['[UNK]'] = len(vocab_dict)
-	vocab_dict['[PAD]'] = len(vocab_dict)
-	if save:
-		with open(vocab_filename, 'w') as fout:
-			json.dump(vocab_dict,fout)
-	return vocab_dict
 
 
 
