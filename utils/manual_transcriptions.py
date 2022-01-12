@@ -15,12 +15,16 @@ import progressbar as pb
 '''
 [frl:       = Codeswitch naar Fries voor nederlandse spreker
 [nl: = Codeswitch naar Nederlands vanuit het Fries
-[frl-??:    = Niet specifiek herkend Fries dialect of Fries uitgesproken woord dat qua spelling of uitspraak niet als correct Fries wordt aangemerkt maar wel degelijk Fries klinkt. Altijd fonetisch genoteerd. 
-[frl_??:    = zelfde als frl-?? (wordt in uiteindelijk dataset nog opgeschoond / genormaliseerd)
+[frl-??:    = Niet specifiek herkend Fries dialect of Fries uitgesproken woord 
+			dat qua spelling of uitspraak niet als correct Fries wordt aangemerkt 
+			maar wel degelijk Fries klinkt. Altijd fonetisch genoteerd. 
+[frl_??:    = zelfde als frl-?? (wordt in uiteindelijk dataset nog opgeschoond 
+			/ genormaliseerd)
 [frl-nl:    = Vernederlandst Fries woord
 [nl-frl:    = Verfriest Nederlands woord
 [frl-sw:    = Herkend als Zuid-west Fries dialect
-[nl-overlap: = Betekenis nu niet bekend, ingevoerd door taalspecialist. Betekenis wordt nagevraagd.
+[nl-overlap: = Betekenis nu niet bekend, ingevoerd door taalspecialist. 
+			Betekenis wordt nagevraagd.
 '''
 
 output_dir = '/vol/tensusers/mbentum/FRISIAN_ASR/'
@@ -31,13 +35,14 @@ def get_segments(name = 'council',partition = 'train'):
 	elif name == 'fame': name = 'frisian radio broadcasts'
 	else:
 		raise ValueError('name should be council or fame')
-	if partition not in 'train,dev,test'.split(','): raise ValueError('partition should be train/dev/test')
+	if partition not in 'train,dev,test'.split(','): 
+		raise ValueError('partition should be train/dev/test')
 	t = Text.objects.filter(source__name = name)
 	return t.filter(partition = partition)
 	
 
-def make_all_council_transcriptions_with_tags(error = False,save = False, with_original=False,
-	kaldi= True, lm=False):
+def make_all_council_transcriptions_with_tags(error = False,save = False, 
+	with_original=False, kaldi= True, lm=False):
 	'''
 	save 		whether to save the file
 	with_orig.. whether to add the orginal label (for debugging) 
@@ -56,7 +61,8 @@ def make_all_council_transcriptions_with_tags(error = False,save = False, with_o
 			#provides a line with wav filename start time end time label
 			if kaldi:line = segment.transcription.line_with_tags
 			if lm:line = segment.transcription.text_with_tags
-			if line:o.append(line)#only append line if there is something in the label
+			#only append line if there is something in the label
+			if line:o.append(line)
 			if with_original:
 				o.append(t.transcription.line)
 				o.append('-'*9)
@@ -89,10 +95,9 @@ frisian = Language.objects.get(name='Frisian')
 dutch_frisianized = Language.objects.get(name='Dutch_frisianized')
 frisian_dutchized = Language.objects.get(name='Frisian_dutchized')
 english = Language.objects.get(name='English')
-ld = {'FRL':frisian,'NL':dutch,'frl':frisian,'fr':frisian,'nl':dutch,'frl-nl':frisian_dutchized}
-ld.update({'nl-frl':dutch_frisianized, 'frl-sw':frisian,'en':english,'frl_??':'frl-??'})
-ld.update({'frl-??':'frl-??'})
-
+ld = {'FRL':frisian,'NL':dutch,'frl':frisian,'fr':frisian,'nl':dutch}
+ld.update({'nl-frl':dutch_frisianized, 'frl-sw':frisian,'en':english})
+ld.update({'frl-??':'frl-??','frl-nl':frisian_dutchized,'frl_??':'frl-??'})
 cs = 'frl,nl,frl-??,frl_??,frl-nl,nl-frl,frl-sw,nl-overlap,overlap-nl,en'.split(',')
 tags = dict([[x,'code_switch'] for x in cs])
 tags.update({'++':'enrich','--':'cleaning','eh':'eh','he':'eh','hè':'eh'})
@@ -143,14 +148,16 @@ def add_transcription(t, save = False, source = council_source, check_db = True)
 		error = t.get_bracket_error or t.bracket_error or t.tag_error
 		multiple_languages = True if len(t.languages) > 1 else False
 		if check_db:
-			o = Text.objects.filter(start_time = t.start, end_time = t.end, wav_filename = t.wav)
+			o = Text.objects.filter(start_time = t.start, end_time = t.end, 
+				wav_filename = t.wav)
 			if o:
 				print('transcription already stored, returning object from database')
 				return o
 		o =Text(filetype = 'txt',raw_text = t.text, transcription_meta = t.line, 
 			main_language = t.language, source = source, text_type= text_type,
 			start_time = t.start, end_time = t.end, wav_filename = t.wav,
-			multiple_languages = multiple_languages, error = error, file_id = t.file_id)
+			multiple_languages = multiple_languages, error = error, 
+			file_id = t.file_id)
 		if not save: return o
 		try: o.save()
 		except:
@@ -167,7 +174,8 @@ class Transcription:
 		self.line = line
 		self.line_type = line_type
 		if line_type == 'council':
-			self.file_id, self.wav, self.l, self.start, self.end, self.text= line.split('\t')
+			l = line
+			self.file_id,self.wav,self.l,self.start,self.end,self.text=l.split('\t')
 		if line_type == 'radio':
 			self.wav = line.filename + '.wav'
 			self.l = line.language
@@ -198,7 +206,7 @@ class Transcription:
 
 	def extract_brackets_and_words(self):
 		self.brackets = []
-		brackets, self.line_without_brackets,word_chunks,error = get_brackets(self.text)
+		brackets,self.line_without_brackets,word_chunks,error=get_brackets(self.text)
 		self.get_bracket_error = error
 		for b in brackets:
 			self.brackets.append(Bracket(b,line_type = self.line_type))
@@ -237,14 +245,15 @@ class Transcription:
 
 	@property
 	def text_with_tags(self):
-		d = {dutch:'-nl',frisian:'-fr',dutch_frisianized:'-nl',frisian_dutchized:'-fr',
-			english:'-eng'}
+		d = {dutch:'-nl',frisian:'-fr',dutch_frisianized:'-nl',
+			frisian_dutchized:'-fr',english:'-eng'}
 		output = []
 		for word in self.words:
 			if word.word == '$$': continue
 			if word.is_word and word.language: 
 				if word.language == 'frl-??': output.append('<spn>')
-				elif word.language and word.language.name == 'unknown': output.append('<spn>')
+				elif word.language and word.language.name == 'unknown': 
+					output.append('<spn>')
 				else: output.append(word.word + d[word.language])
 			else:output.append(word.word)
 		return ' '.join(output).lower()
@@ -272,7 +281,8 @@ class Transcription:
 	@property
 	def line_with_tags(self):
 		if not self.text_with_tags: return False
-		return '\t'.join([self.wav,str(self.start),str(self.end),self.text_with_tags])
+		twt = self.text_with_tags
+		return '\t'.join([self.wav,str(self.start),str(self.end),twt])
 
 	@property
 	def dutch_words(self):
@@ -325,7 +335,9 @@ class Bracket:
 			self.handle_council_bracket()
 		elif line_type == 'radio':
 			self.handle_radio_bracket()
-		else: raise ValueError('unknown line_type ' + line_type + ' should be council or radio')
+		else: 
+			m = 'unknown line_type ' + line_type + ' should be council or radio'
+			raise ValueError(m)
 		if not self.error: self.set_info()
 
 	def handle_radio_bracket(self):
@@ -352,7 +364,8 @@ class Bracket:
 		self.tag_error = False
 		self.t, self.tag_text = self.text, self.text
 		if ':' in self.text:
-			if self.text.count(':') == 1: self.t,self.tag_text = self.text.split(':') 
+			if self.text.count(':') == 1: 
+				self.t,self.tag_text = self.text.split(':') 
 			elif self.text.count(':') == 2: 
 				self.t,temp,self.tag_text = self.text.split(':') 
 				self.tag_text = temp + ':' +self.tag_text
@@ -381,13 +394,16 @@ class Bracket:
 				for item in spn:
 					if item in self.tag_text: label = '<nsn>'
 			if not label: 
-				print('could not categorize tag text:',self.tag_text,'setting word to spn')
+				print('could not categorize tag text:',self.tag_text,
+					'setting word to spn')
 				label = '<spn>'
 			self.words.append(Word(label,'',False,False))
 
 
 	def __repr__(self):
-		return self.text + ' | ' + self.tag + ' | '  + str(self.error) + ' | ' + str(self.tag_error)
+		m = self.text + ' | ' + self.tag + ' | '  + str(self.error) + ' | ' 
+		m += str(self.tag_error)
+		return m
 
 		
 	def make_words(self):
@@ -438,8 +454,8 @@ class Audio:
 		self.nwords = sum([len(t.transcription.words) for t in texts])
 
 	def __repr__(self):
-		m = self.audio_filename + ' ' + str(self.duration) + ' ' + str(self.nsegments)
-		m += ' ' + str(self.nwords)
+		m = self.audio_filename + ' ' + str(self.duration) + ' ' 
+		m += str(self.nsegments) + ' ' + str(self.nwords)
 		return m
 
 def analyse_audio_recordings(wav_dict = None):
@@ -481,7 +497,8 @@ def make_meetings():
 	return meetings,o, bads
 
 class Meeting:
-	'''represents a specific meeting based on a specific prefix (part of the meeting_wav.
+	'''represents a specific meeting based on a specific prefix 
+	(part of the meeting_wav.
 	the meetings contains consecutive segments (i.e. seg_wav), a seg_wav contains
 	multiple segements.
 	A specific segment is stored in a Line.
@@ -520,7 +537,8 @@ class Line:
 	def __init__(self,line,index,start_in_meeting = None,meeting = None):
 		if type(line) == str: line = line.split('\t')
 		self.line = '\t'.join(line)
-		self.meeting_wav,self.seg_wav,self.language,self.start,self.end,self.text = line
+		l = line
+		self.meeting_wav,self.seg_wav,self.language,self.start,self.end,self.text=l
 		self.start = float(self.start)
 		self.end= float(self.end)
 		self.duration = self.end - self.start
@@ -536,14 +554,16 @@ class Line:
 
 	@property
 	def transcription(self):
-		if not hasattr(self,'_transcription'): self._transcription = Transcription(self.line)
+		if not hasattr(self,'_transcription'): 
+			self._transcription = Transcription(self.line)
 		return self._transcription
 
 	@property
 	def id_line(self):
 		l = self.transcription.line_with_tags
 		o = [self.meeting.prefix,str(self.index),self.meeting_wav,self.seg_wav]
-		o += [str(self.start),str(self.end),self.text,make_time(self.start_in_meeting)]
+		meeting_start = make_time(self.start_in_meeting)
+		o += [str(self.start),str(self.end),self.text,meeting_start]
 		if not l:
 			o += [str(self.start_in_meeting),self.line]
 		else:
@@ -569,15 +589,17 @@ def make_time(seconds):
 	return ':'.join([h,m,s])
 			
 
-def make_train_dev_test(meetings,perc = 0.1, seed = 1111,meeting_test_duration = 1800,
-	save = False):
+def make_train_dev_test(meetings,perc = 0.1, seed = 1111,
+	meeting_test_duration = 1800,save = False):
+	
 	'''partitions the meetings in a training, dev and test set. 
 	perc 					the amount of materials in dev and in test partition
 	seed 					number to freeze the randomization
 	meeting_test_duration 	length from specific meetings reserved for dev or test
 	save 					whether to save the files
 	returns segments for training, dev, test
-	segments from dev and test are consecutive segments (upto meeting_test_duration length)
+	segments from dev and test are consecutive segments 
+	(upto meeting_test_duration length)
 	meetings used for dev are not used for test
 	all remaining segments are put into training
 	'''
@@ -598,11 +620,13 @@ def make_train_dev_test(meetings,perc = 0.1, seed = 1111,meeting_test_duration =
 	for k in meetings.keys():
 		if k not in dev_test_meetings:train.extend(meetings[k].lines)
 		elif k in dev_meetings:
-			temp_dev,other = _extract_segments_from_meeting(meetings[k],meeting_test_duration)
+			temp_dev,other = _extract_segments_from_meeting(meetings[k],
+				meeting_test_duration)
 			dev.extend(temp_dev)
 			train.extend(other)
 		elif k in test_meetings:
-			temp_test,other = _extract_segments_from_meeting(meetings[k],meeting_test_duration)
+			temp_test,other = _extract_segments_from_meeting(meetings[k],
+				meeting_test_duration)
 			test.extend(temp_test)
 			train.extend(other)
 	check_train_dev_test(train,dev,test)
@@ -616,10 +640,11 @@ def make_train_dev_test(meetings,perc = 0.1, seed = 1111,meeting_test_duration =
 
 
 def _extract_segments_from_meeting(meeting,meeting_test_duration):
-	'''extracts consecutive segments from a single meeting. The start time is random, but
+	'''extracts consecutive segments from a single meeting. 
+	The start time is random, but
 	starts no later that meeting duration minus meeting_test_duration. 
-	return the selected segments (within random start + meeting_test_duration) as output
-	all other segments are returned in other
+	return the selected segments (within random start + meeting_test_duration) 
+	as output all other segments are returned in other
 	'''
 	duration = meeting.duration
 	if duration < meeting_test_duration: return meeting.lines
@@ -667,7 +692,8 @@ def _in_other(source,other):
 	return False
 	
 def check_train_dev_test(train,dev,test):
-	'''checks if there is no overlap in segments between the train, dev and test partitions'''
+	'''checks if there is no overlap in segments between the train, 
+	dev and test partitions'''
 	no_overlap =True
 	if _in_other(train,dev):
 		print('lines in train are found in dev')
@@ -736,9 +762,11 @@ def make_cgn_transcriptions(tables = None):
 	for i,table in enumerate(tables):
 		bar.update(i)
 		for line in table.lines:
-			if line.speaker_id == 'BACKGROUND' or line.speaker_id == 'COMMENT':continue
+			if line.speaker_id == 'BACKGROUND' or line.speaker_id == 'COMMENT':
+				continue
 			line.file_id = line.table.file_id
-			line.gender = s2g[line.speaker_id] if line.speaker_id in s2g.keys() else ''
+			g = s2g[line.speaker_id] if line.speaker_id in s2g.keys() else ''
+			line.gender = g
 			line.language = 'nl'
 			line.label = clean_text(line.text)
 			line.filename = line.audio_fn
