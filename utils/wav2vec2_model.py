@@ -7,6 +7,9 @@ from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ForCTC
 from transformers import TrainingArguments
 from transformers import Trainer
+import numpy as np
+from datetime import datetime
+import os
 
 processor = None
 wer_metric = load_metric('wer')
@@ -72,6 +75,7 @@ def load_data_collator():
 	return DataCollatorCTCWithPadding(processor = processor,padding = True)
 		
 def compute_metrics(pred):
+	processor = load_processor()
 	pred_logits = pred.predictions
 	pred_ids = np.argmax(pred_logits, axis = -1)
 	pred.label_ids[pred.label_ids == -100] = processor.tokenizer.pad_token_id
@@ -79,7 +83,18 @@ def compute_metrics(pred):
 	# we do not want to group tokens when computing the metricso
 	label_str = processor.batch_decode(pred.label_ids, group_tokens=False)
 	wer = wer_metric.compute(predictions=pred_str, references=label_str)
+	save_preds_references(pred_str,label_str,wer)
 	return {"wer": wer}
+
+def save_preds_references(preds,references,wer):
+	wer = str(int(wer * 100))
+	d = datetime.now().strftime("%d_%m_%Y_%H_%M")
+	filename = cache_dir + 'log_dev_wer_' + wer + '-'+d
+	output = []
+	for pred, ref in zip(preds,references):
+		output.append(pred + '\t' + ref)
+	with open(filename,'w') as fout:
+		fout.write('\n'.join(output))
 
 def load_model():
 	processor = load_processor()
@@ -98,28 +113,28 @@ def load_model():
 	model.freeze_feature_extractor()
 	return model
 
-
-def load_training_arguments():
+def load_training_arguments(experiment_name= vocab_dir):
+	if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
 	training_args = TrainingArguments(
-		output_dir=vocab_dir,
+		output_dir=experiment_name,
 		group_by_length=True,
-		per_device_train_batch_size=16,
+		per_device_train_batch_size=30,
 		gradient_accumulation_steps=2,
 		evaluation_strategy="steps",
-		num_train_epochs=3,
+		num_train_epochs=100,
 		gradient_checkpointing=True,
 		fp16=True,
-		save_steps=50,
-		eval_steps=50,
+		save_steps=1000,
+		eval_steps=1000,
 		logging_steps=50,
 		learning_rate=3e-4,
-		warmup_steps=10,
-		save_total_limit=2,
+		warmup_steps=500,
+		save_total_limit=6,
 		push_to_hub=False,
 	)
 	return training_args
 
-def load_trainer(model = None, training_args = None, datasets = None,
+def load_trainer(experiment_name,model = None, training_args = None, datasets = None,
 	train = 'train',evaluate='dev'):
 	print('set processor')
 	processor = load_processor()
@@ -130,10 +145,10 @@ def load_trainer(model = None, training_args = None, datasets = None,
 		model = load_model()
 	if not training_args: 
 		print('load training arguements')
-		training_args = load_training_arguments()
+		training_args = load_training_arguments(experiment_name)
 	if not datasets: 
 		print('load datasets')
-		datasets= preprocess_common_voice_frisian()
+		datasets= preprocess_council()
 	print('defining the trainer')
 	trainer = Trainer(
 		model=model,
@@ -144,4 +159,9 @@ def load_trainer(model = None, training_args = None, datasets = None,
 		eval_dataset=datasets[evaluate],
 		tokenizer=processor.feature_extractor,
 	)
+	return trainer
+
+def do_council_training(experiment_name):
+	trainer = load_trainer(experiment_name = vocab_dir + experiment_name)
+	trainer.train()
 	return trainer
