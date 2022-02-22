@@ -109,6 +109,8 @@ def make_vocab_dict(datasets, save=True):
 	vocab_dict = {v: k for k, v in enumerate(sorted(vocab))}
 	vocab_dict['[UNK]'] = len(vocab_dict)
 	vocab_dict['[PAD]'] = len(vocab_dict)
+	vocab_dict['|'] = vocab_dict[' ']
+	del vocab_dict[' ']
 	if save:
 		with open(vocab_filename, 'w') as fout:
 			json.dump(vocab_dict,fout)
