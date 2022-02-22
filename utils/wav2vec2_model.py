@@ -10,13 +10,19 @@ from transformers import Trainer
 import numpy as np
 from datetime import datetime
 import os
+import json
 
 processor = None
 wer_metric = load_metric('wer')
 
+def load_vocab():
+	fin = open(vocab_dir+ 'vocab.json')
+	return json.load(fin)
+
 def load_tokenizer(vocab_dir = vocab_dir,cache_dir = cache_dir):
 	tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(vocab_dir,
-		cache_dir = cache_dir, unk_token='[UNK]',pad_token='[PAD]')
+		cache_dir = cache_dir, unk_token='[UNK]',pad_token='[PAD]',
+		word_delemiter_token='|')
 	return tokenizer
 			
 def load_feature_extractor():
@@ -144,7 +150,7 @@ def load_trainer(experiment_name,model = None, training_args = None, datasets = 
 		print('load model')
 		model = load_model()
 	if not training_args: 
-		print('load training arguements')
+		print('load training arguments')
 		training_args = load_training_arguments(experiment_name)
 	if not datasets: 
 		print('load datasets')
@@ -165,3 +171,24 @@ def do_council_training(experiment_name):
 	trainer = load_trainer(experiment_name = vocab_dir + experiment_name)
 	trainer.train()
 	return trainer
+
+
+def labels_to_letters(ids, recognizer_dir = '', processor = None):
+	if not processor: processor = Wav2Vec2Processor.from_pretrained(recognizer_dir)
+	return processor.decode(ids)
+
+def decode_audio(audio_values, recognizer_dir = '', model = None, processor = None):
+	if recognizer_dir:
+		model = Wav2Vec2ForCTC.from_pretrained(recognizer_dir).to('cuda')
+		processor = Wav2Vec2Processor.from_pretrained(recognizer_dir)
+	if not model: 
+		m = 'please provide model directory or model and processor'
+		raise ValueError(m)
+	input_dict = processor(audio_values, return_tensors='pt', padding = True,
+		sampling_rate = 16_000)
+	logits = model(input_dict.input_values.to('cuda')).logits
+	labels = torch_argmax(logits, dim = -1)[0]
+	return labels_to_letters(pred_ids, processor=processor)
+
+	
+
